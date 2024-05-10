@@ -1,0 +1,121 @@
+class transformer(input, output):
+  super__init__(self, num_layers, model_dim, num_heads, ff_dim, vocab_size, max_seq_len): 
+    class feed()
+        def ff_network(x):
+            dim_model = x.shape[-1]
+            dim_ff = dim_model * 4  # Typically, the dimensionality is increased 4x
+            w_1 = np.random.randn(dim_model, dim_ff)
+            b_1 = np.random.randn(dim_ff)
+            w_2 = np.random.randn(dim_ff, dim_model)
+            b_2 = np.random.randn(dim_model)
+            # Reshape x to match the dimensions of w_1
+            x = x.reshape(-1, dim_model)
+            return np.matmul(np.maximum(np.matmul(x, w_1) + b_1, 0), w_2) + b_2
+            class encoder():
+        def pos_encoding(seq_len, model_dim):
+            pos_enc = np.zeros((seq_len, model_dim))
+            for pos in range(seq_len):
+                for i in range(0, model_dim, 2):
+                    pos_enc[pos, i] = np.sin(pos / (10000 ** ((2 * i)/model_dim)))
+                    pos_enc[pos, i + 1] = np.cos(pos / (10000 ** ((2 * (i + 1))/model_dim)))
+            return pos_enc
+    
+        # Add positional encoding to inputs
+        def add_pos_enc(x):
+            seq_len, model_dim = x.shape
+            pos_enc = positional_encoding(seq_len, model_dim)
+            return x + pos_enc
+    class attend()
+        def softmax(x):
+            e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+            return e_x / e_x.sum(axis=-1, keepdims=True)
+    
+        def dot_product(Q, K, V):
+            d_k = K.shape[-1]
+            Q = Q.reshape(Q.shape[0], Q.shape[1], d_k)  # Reshape Q to match K's second-to-last dimension
+            d_q = Q.shape[-1]
+            scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(d_k)
+            weights = softmax(scores)
+            return np.matmul(weights, V)
+    
+        def ensure_correct_dimensions(Q, K, V, num_heads, head_dim):
+            batch_size, seq_length, model_dim = Q.shape
+            new_shape = (batch_size, seq_length, num_heads, head_dim)
+            Q = Q.reshape(new_shape)
+            K = K.reshape(new_shape)
+            V = V.reshape(new_shape)
+            return Q, K, V
+    
+        # Then update your multi_head_attention function to use this helper:
+        def multi_head_attention(Q, K, V, num_heads):
+            head_dim = Q.shape[-1] // num_heads
+            Q, K, V = ensure_correct_dimensions(Q, K, V, num_heads, head_dim)
+            outputs = []
+            for i in range(num_heads):
+                q = Q[:, :, i, :]
+                k = K[:, :, i, :]
+                v = V[:, :, i, :]
+                outputs.append(scaled_dot_product_attention(q, k, v))
+            return np.concatenate(outputs, axis=-1)
+
+
+    class t_block():
+        def t_block(x, num_heads, head_dim):
+            # Multi-head self-attention
+            q = x
+            k = x
+            v = x
+            # Reshape Q to match K's second-to-last dimension
+            q = q.reshape(q.shape[0], q.shape[1], num_heads, head_dim)
+            attn_output = multi_head_attention(q, k, v, num_heads)
+            x = layer_norm(x + attn_output)  # Add & Norm
+            # Feed-forward network
+            ff_output = feed_forward_network(x)
+            x = layer_norm(x + ff_output)  # Add & Norm
+            return x
+        def cross_entropy_loss(logits, targets):
+            logits = logits - np.max(logits, axis=-1, keepdims=True)
+            log_probs = logits - np.log(np.sum(np.exp(logits), axis=-1, keepdims=True))
+            loss = -np.sum(targets * log_probs) / logits.shape[0]
+            return loss
+        
+        def backprop(params, grads, lr=0.01):
+            # Example gradient descent update
+            for key in params.keys():
+                params[key] -= lr * grads[key]  # Update each parameter
+    
+    # Example of calculating gradients (dummy implementation)
+        def compute_gradients(params, loss):
+            grads = {key: np.random.rand(*params[key].shape) for key in params}  # Dummy gradient calculation
+            return grads
+        
+        # Training step with backpropagation
+        def train_step(x, targets, params, num_heads):
+            # Forward pass
+            attn_output = multi_head_attention(x, x, x, num_heads)
+            x = layer_norm(x + attn_output)
+            ff_output = feed_forward_network(x)
+            x = layer_norm(x + ff_output)
+            # Dummy loss calculation
+            loss = np.mean((x - targets)**2)  # Mean squared error for example
+            # Compute gradients
+            grads = compute_gradients(params, loss)
+            # Backpropagation
+            backprop(params, grads)
+            return loss
+    
+        def set_loop(num_epochs):
+            num_epochs = input('input number of epochs', int)
+            for epoch in range(num_epochs):
+                loss = train_step(x_encoded, x_encoded,params=params, num_heads=8)  # Assuming x_encoded is defined
+                print(f"Epoch {epoch}, Loss: {loss}")
+    
+    class LayerNormalization:
+        def __init__(self, epsilon=1e-6):
+            self.epsilon = epsilon
+    
+        def __call__(self, x):
+            mean = x.mean(axis=-1, keepdims=True)
+            std = x.std(axis=-1, keepdims=True)
+            return (x - mean) / (std + self.epsilon)
+#basic transformer with selfattention inspired by different youtube videos and just kinda mushed together. 
