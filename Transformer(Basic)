@@ -25,6 +25,7 @@ class transformer(input, output):
             seq_len, model_dim = x.shape
             pos_enc = positional_encoding(seq_len, model_dim)
             return x + pos_enc
+    
     class attend()
         def softmax(x):
             e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
@@ -59,7 +60,7 @@ class transformer(input, output):
             return np.concatenate(outputs, axis=-1)
 
 
-    class t_block():
+     class t_block():
         def t_block(x, num_heads, head_dim):
             # Multi-head self-attention
             q = x
@@ -110,6 +111,21 @@ class transformer(input, output):
                 loss = train_step(x_encoded, x_encoded,params=params, num_heads=8)  # Assuming x_encoded is defined
                 print(f"Epoch {epoch}, Loss: {loss}")
     
+    
+ class decoder():
+    def super__init__(self, num_layers, model_dim, num_heads, ff_dim, output_vocab_size):
+        self.num_layers = num_layers
+        self.model_dim = model_dim
+        self.num_heads = num_heads
+        self.ff_dim = ff_dim
+        self.output_vocab_size = output_vocab_size
+
+        # Decoder layers (we'll define the decoder block later)
+        self.decoder_layers = [decoder_block() for _ in range(num_layers)]
+
+        # Output projection
+        self.output_projection = nn.Linear(model_dim, output_vocab_size)  
+
     class LayerNormalization:
         def __init__(self, epsilon=1e-6):
             self.epsilon = epsilon
@@ -118,4 +134,63 @@ class transformer(input, output):
             mean = x.mean(axis=-1, keepdims=True)
             std = x.std(axis=-1, keepdims=True)
             return (x - mean) / (std + self.epsilon)
-#basic transformer with selfattention inspired by different youtube videos and just kinda mushed together. 
+
+    def masked_multi_head_attention(self, Q, K, V, mask=None):
+        head_dim = Q.shape[-1] // self.num_heads  # Note: use self.num_heads here
+        Q, K, V = ensure_correct_dimensions(Q, K, V, self.num_heads, head_dim) 
+    
+        # Calculate attention scores
+        scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(head_dim)
+    
+        # Apply mask (if provided)
+        if mask is not None:
+            mask = mask[:, tf.newaxis, tf.newaxis, :]  # Broadcast mask for multi-head attention
+            scores = scores.masked_fill(mask == 0, -1e9)  # Set future scores to a large negative value
+    
+        # Calculate attention weights
+        weights = softmax(scores)
+
+        # Apply attention weights to values 
+        outputs = []
+        for i in range(self.num_heads):
+            q = Q[:, :, i, :]
+            k = K[:, :, i, :]
+            v = V[:, :, i, :]
+            outputs.append(np.matmul(weights[:, :, i, :], v))
+
+    return np.concatenate(outputs, axis=-1)
+
+   def encoder_decoder_attention(self, Q, K, V):
+        head_dim = Q.shape[-1] // self.num_heads
+        Q, K, V = ensure_correct_dimensions(Q, K, V, self.num_heads, head_dim) 
+    
+        # Calculate attention scores between decoder and encoder
+        scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(head_dim)
+    
+        # Calculate attention weights
+        weights = softmax(scores)
+    
+        # Apply weights to encoder outputs to get context vector
+        outputs = []
+        for i in range(self.num_heads):
+            q = Q[:, :, i, :]
+            k = K[:, :, i, :]
+            v = V[:, :, i, :]
+            outputs.append(np.matmul(weights[:, :, i, :], v))
+
+        return np.concatenate(outputs, axis=-1)
+
+    def decoder_block(self, x, encoder_output, mask=None): 
+        # Masked multi-head self-attention
+        x = self.masked_multi_head_attention(x, x, x, mask)
+        x = layer_norm(x + attn_output) 
+
+        # Encoder-decoder attention
+        x = self.encoder_decoder_attention(x, encoder_output, encoder_output)
+        x = layer_norm(x + attn_output) 
+    
+        # Feed-forward
+        ff_output = feed_forward_network(x)
+        x = layer_norm(x + ff_output)
+
+        return x
