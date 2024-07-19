@@ -1,0 +1,201 @@
+import re
+from collections import defaultdict, Counter
+import torch
+from torch.utils.data import Dataset
+import random
+from transformers import DataCollatorForSeq2Seq
+
+class MultitokenBPETokenizer:
+    def __init__(self, vocab_size=300000, max_merges=10000, n_future_tokens=4):
+        self.vocab_size = vocab_size
+        self.max_merges = max_merges
+        self.n_future_tokens = n_future_tokens
+        self.token_to_id = {"[PAD]": 0, "[UNK]": 1, "[CLS]": 2, "[SEP]": 3, "[MASK]": 4, "[EOS]": 5}
+        self.id_to_token = {v: k for k, v in self.token_to_id.items()}
+        self.vocab = {}
+        self.merges = {}
+        self.pattern = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?[a-zA-Z]+| ?[0-9]+| ?[^\s\w]+|\s+(?!\S)|\s+""")
+        self.pad_token = "<pad>"
+        self.pad_token_id = 0
+
+    def __call__(self, text):
+        return self.tokenize(text)
+
+    def build_vocab(self, token_counter, min_frequency=1):
+        vocab = {char: freq for char, freq in token_counter.items() if freq >= min_frequency}
+        for char in vocab:
+            if char not in self.token_to_id:
+                self.token_to_id[char] = len(self.token_to_id)
+                self.id_to_token[len(self.id_to_token)] = char
+        return vocab
+
+    def train(self, texts, min_frequency=1):
+        token_counter = Counter()
+        for text in texts:
+            tokens = self.tokenize(text)
+            for token in tokens:
+                token_counter[token] += 1
+
+        vocab = self.build_vocab(token_counter, min_frequency)
+
+        merge_count = 0
+        while len(self.token_to_id) < self.vocab_size and merge_count < self.max_merges:
+            pairs = self.get_stats(vocab)
+            if not pairs:
+                break
+            best = max(pairs, key=pairs.get)
+            new_token = "".join(best)
+            if new_token not in self.token_to_id:
+                self.token_to_id[new_token] = len(self.token_to_id)
+                self.id_to_token[len(self.id_to_token)] = new_token
+            self.merges[best] = new_token
+            vocab = self.merge_vocab(best, vocab)
+            merge_count += 1
+
+        print(f"Vocabulary size: {len(self.token_to_id)}")
+        print("Vocabulary:", self.token_to_id)
+
+    def get_stats(self, vocab):
+        pairs = defaultdict(int)
+        for word, freq in vocab.items():
+            symbols = word.split()
+            for i in range(len(symbols) - 1):
+                pairs[symbols[i], symbols[i + 1]] += freq
+        return pairs
+
+    def merge_vocab(self, pair, v_in):
+        v_out = {}
+        bigram = re.escape(' '.join(pair))
+        p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
+        for word in v_in:
+            w_out = p.sub(''.join(pair), word)
+            v_out[w_out] = v_in[word]
+        return v_out
+
+    def tokenize(self, text):
+        return [token for token in self.pattern.findall(text.lower()) if token.strip()]
+
+    def encode(self, text):
+        tokens = self.tokenize(text)
+        ids = []
+        for token in tokens:
+            if token in self.token_to_id:
+                ids.append(self.token_to_id[token])
+            else:
+                for char in token:
+                    ids.append(self.token_to_id.get(char, self.token_to_id['[UNK]']))
+        ids.append(self.token_to_id['[EOS]'])
+        return torch.tensor(ids)
+
+    def encode_plus(self, texts):
+        return [self.encode(text) for text in texts]
+
+    def pad_sequences(self, sequences, max_length, pad_value=0):
+        padded_sequences = []
+        for seq in sequences:
+            if len(seq) < max_length:
+                seq = torch.cat((seq, torch.tensor([pad_value] * (max_length - len(seq)))))
+            else:
+                seq = seq[:max_length]
+            padded_sequences.append(seq)
+        return torch.stack(padded_sequences)
+
+    def decode(self, ids):
+        tokens = [self.id_to_token[id.item()] for id in ids if id.item() in self.id_to_token and id.item() != self.token_to_id['[PAD]']]
+        
+        # Remove special tokens
+        tokens = [token for token in tokens if token not in ('[CLS]', '[SEP]', '[MASK]', '[EOS]')]
+        
+        # Join the tokens
+        text = ''.join(tokens).replace('▁', ' ').strip()
+        
+        return text
+
+    def decode_plus(self, batch_ids):
+        return [self.decode(ids) for ids in batch_ids]
+
+    def batch_encode(self, texts, max_length):
+        encoded_texts = self.encode_plus(texts)
+        return self.pad_sequences(encoded_texts, max_length)
+
+    def batch_decode(self, batch_ids):
+        return self.decode_plus(batch_ids)
+
+    def predict_future_tokens(self, text, model):
+        encoded_text = self.encode(text)
+        input_ids = encoded_text.unsqueeze(0)  # Add batch dimension
+        
+        with torch.no_grad():
+            outputs = model(input_ids)
+            logits = outputs.logits
+        
+        # Get the last token's logits
+        last_token_logits = logits[0, -1, :]
+        
+        # Get the top n_future_tokens predictions
+        top_k_values, top_k_indices = torch.topk(last_token_logits, self.n_future_tokens)
+        
+        predicted_tokens = []
+        for idx in top_k_indices:
+            predicted_tokens.append(self.id_to_token[idx.item()])
+        
+        return predicted_tokens
+
+    def generate_text(self, text, model, max_length=100):
+        input_ids = self.encode(text)
+        
+        for _ in range(max_length):
+            with torch.no_grad():
+                outputs = model(input_ids.unsqueeze(0))
+                next_token_logits = outputs.logits[0, -1, :]
+                next_token = torch.argmax(next_token_logits).unsqueeze(0)
+                
+                if next_token.item() == self.token_to_id['[EOS]']:
+                    break
+                
+                input_ids = torch.cat([input_ids, next_token])
+        
+        return self.decode(input_ids)
+
+# Example usage
+tokenizer = MultitokenBPETokenizer(vocab_size=10000, max_merges=1000, n_future_tokens=4)
+
+# Example texts
+texts = [
+    "Creating a hypergraph-based model.",
+    "Hypergraphs can represent complex relationships.",
+    "This is an additional sentence to increase vocabulary.",
+    "Machine learning models use various algorithms.",
+    "Natural language processing is a fascinating field.",
+    "hello world",
+    "welcome to ONI",
+    "You're welcome",
+    "I'm sorry, I don't understand.",
+    "Please, give me something to do",
+    "working on things is fun",
+    "Being productive is fun.",
+    "Striving towards big goals gives us meaning",
+]
+# Training the tokenizer
+tokenizer.train(texts)
+tokenizer.train(corpus)
+tokenizer.train(labels)
+
+# Encoding a text
+encoded_text = tokenizer.encode("hello world, welcome to ONI.")
+print("Encoded text:", encoded_text)
+print("Decoded text:", tokenizer.decode(encoded_text))
+
+# Batch encoding texts
+max_length = 6400
+batch_encoded_texts = tokenizer.batch_encode(texts, max_length)
+print("Batch encoded texts:", batch_encoded_texts)
+
+# Batch decoding texts
+batch_decoded_texts = tokenizer.batch_decode(batch_encoded_texts)
+print("Batch decoded texts:", batch_decoded_texts)
+
+# Note: You'll need to implement or import a language model to use the predict_future_tokens and generate_text methods
+# For example:
+# model = YourLanguageModel()
+
