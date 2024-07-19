@@ -1,196 +1,69 @@
-class transformer(input, output):
-  super__init__(self, num_layers, model_dim, num_heads, ff_dim, vocab_size, max_seq_len): 
-    class feed()
-        def ff_network(x):
-            dim_model = x.shape[-1]
-            dim_ff = dim_model * 4  # Typically, the dimensionality is increased 4x
-            w_1 = np.random.randn(dim_model, dim_ff)
-            b_1 = np.random.randn(dim_ff)
-            w_2 = np.random.randn(dim_ff, dim_model)
-            b_2 = np.random.randn(dim_model)
-            # Reshape x to match the dimensions of w_1
-            x = x.reshape(-1, dim_model)
-            return np.matmul(np.maximum(np.matmul(x, w_1) + b_1, 0), w_2) + b_2
-            class encoder():
-        def pos_encoding(seq_len, model_dim):
-            pos_enc = np.zeros((seq_len, model_dim))
-            for pos in range(seq_len):
-                for i in range(0, model_dim, 2):
-                    pos_enc[pos, i] = np.sin(pos / (10000 ** ((2 * i)/model_dim)))
-                    pos_enc[pos, i + 1] = np.cos(pos / (10000 ** ((2 * (i + 1))/model_dim)))
-            return pos_enc
-    
-        # Add positional encoding to inputs
-        def add_pos_enc(x):
-            seq_len, model_dim = x.shape
-            pos_enc = positional_encoding(seq_len, model_dim)
-            return x + pos_enc
-    
-    class attend()
-        def softmax(x):
-            e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
-            return e_x / e_x.sum(axis=-1, keepdims=True)
-    
-        def dot_product(Q, K, V):
-            d_k = K.shape[-1]
-            Q = Q.reshape(Q.shape[0], Q.shape[1], d_k)  # Reshape Q to match K's second-to-last dimension
-            d_q = Q.shape[-1]
-            scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(d_k)
-            weights = softmax(scores)
-            return np.matmul(weights, V)
-    
-        def ensure_correct_dimensions(Q, K, V, num_heads, head_dim):
-            batch_size, seq_length, model_dim = Q.shape
-            new_shape = (batch_size, seq_length, num_heads, head_dim)
-            Q = Q.reshape(new_shape)
-            K = K.reshape(new_shape)
-            V = V.reshape(new_shape)
-            return Q, K, V
-    
-        # Then update your multi_head_attention function to use this helper:
-        def multi_head_attention(Q, K, V, num_heads):
-            head_dim = Q.shape[-1] // num_heads
-            Q, K, V = ensure_correct_dimensions(Q, K, V, num_heads, head_dim)
-            outputs = []
-            for i in range(num_heads):
-                q = Q[:, :, i, :]
-                k = K[:, :, i, :]
-                v = V[:, :, i, :]
-                outputs.append(scaled_dot_product_attention(q, k, v))
-            return np.concatenate(outputs, axis=-1)
+import torch
+import torch.nn as nn
+import math
 
-
-     class t_block():
-        def t_block(x, num_heads, head_dim):
-            # Multi-head self-attention
-            q = x
-            k = x
-            v = x
-            # Reshape Q to match K's second-to-last dimension
-            q = q.reshape(q.shape[0], q.shape[1], num_heads, head_dim)
-            attn_output = multi_head_attention(q, k, v, num_heads)
-            x = layer_norm(x + attn_output)  # Add & Norm
-            # Feed-forward network
-            ff_output = feed_forward_network(x)
-            x = layer_norm(x + ff_output)  # Add & Norm
-            return x
-        def cross_entropy_loss(logits, targets):
-            logits = logits - np.max(logits, axis=-1, keepdims=True)
-            log_probs = logits - np.log(np.sum(np.exp(logits), axis=-1, keepdims=True))
-            loss = -np.sum(targets * log_probs) / logits.shape[0]
-            return loss
-        
-        def backprop(params, grads, lr=0.01):
-            # Example gradient descent update
-            for key in params.keys():
-                params[key] -= lr * grads[key]  # Update each parameter
-    
-    # Example of calculating gradients (dummy implementation)
-        def compute_gradients(params, loss):
-            grads = {key: np.random.rand(*params[key].shape) for key in params}  # Dummy gradient calculation
-            return grads
-        
-        # Training step with backpropagation
-        def train_step(x, targets, params, num_heads):
-            # Forward pass
-            attn_output = multi_head_attention(x, x, x, num_heads)
-            x = layer_norm(x + attn_output)
-            ff_output = feed_forward_network(x)
-            x = layer_norm(x + ff_output)
-            # Dummy loss calculation
-            loss = np.mean((x - targets)**2)  # Mean squared error for example
-            # Compute gradients
-            grads = compute_gradients(params, loss)
-            # Backpropagation
-            backprop(params, grads)
-            return loss
-    
-        def set_loop(num_epochs):
-            num_epochs = input('input number of epochs', int)
-            for epoch in range(num_epochs):
-                loss = train_step(x_encoded, x_encoded,params=params, num_heads=8)  # Assuming x_encoded is defined
-                print(f"Epoch {epoch}, Loss: {loss}")
-    
-    
- class decoder():
-    def super__init__(self, num_layers, model_dim, num_heads, ff_dim, output_vocab_size):
+class GRUCellTransformer(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+        super(GRUCellTransformer, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
         self.num_layers = num_layers
-        self.model_dim = model_dim
-        self.num_heads = num_heads
-        self.ff_dim = ff_dim
-        self.output_vocab_size = output_vocab_size
 
-        # Decoder layers (we'll define the decoder block later)
-        self.decoder_layers = [decoder_block() for _ in range(num_layers)]
+        # Input embedding
+        self.embedding = nn.Linear(input_dim, hidden_dim)
 
-        # Output projection
-        self.output_projection = nn.Linear(model_dim, output_vocab_size)  
+        # GRU layers
+        self.gru_cells = nn.ModuleList([nn.GRUCell(hidden_dim, hidden_dim) for _ in range(num_layers)])
 
-    class LayerNormalization:
-        def __init__(self, epsilon=1e-6):
-            self.epsilon = epsilon
-    
-        def __call__(self, x):
-            mean = x.mean(axis=-1, keepdims=True)
-            std = x.std(axis=-1, keepdims=True)
-            return (x - mean) / (std + self.epsilon)
+        # Self-attention layer
+        self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads=4)
 
-    def masked_multi_head_attention(self, Q, K, V, mask=None):
-        head_dim = Q.shape[-1] // self.num_heads  # Note: use self.num_heads here
-        Q, K, V = ensure_correct_dimensions(Q, K, V, self.num_heads, head_dim) 
-    
-        # Calculate attention scores
-        scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(head_dim)
-    
-        # Apply mask (if provided)
-        if mask is not None:
-            mask = mask[:, tf.newaxis, tf.newaxis, :]  # Broadcast mask for multi-head attention
-            scores = scores.masked_fill(mask == 0, -1e9)  # Set future scores to a large negative value
-    
-        # Calculate attention weights
-        weights = softmax(scores)
+        # Output layer
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
 
-        # Apply attention weights to values 
+    def forward(self, x, hidden=None):
+        # x shape: (seq_len, batch_size, input_dim)
+        seq_len, batch_size, _ = x.size()
+
+        # Initialize hidden state if not provided
+        if hidden is None:
+            hidden = [torch.zeros(batch_size, self.hidden_dim).to(x.device) for _ in range(self.num_layers)]
+
+        # Embed input
+        embedded = self.embedding(x)
+
         outputs = []
-        for i in range(self.num_heads):
-            q = Q[:, :, i, :]
-            k = K[:, :, i, :]
-            v = V[:, :, i, :]
-            outputs.append(np.matmul(weights[:, :, i, :], v))
+        for t in range(seq_len):
+            # Process through GRU cells
+            h = embedded[t]
+            for i, gru_cell in enumerate(self.gru_cells):
+                h = gru_cell(h, hidden[i])
+                hidden[i] = h
 
-    return np.concatenate(outputs, axis=-1)
+            # Self-attention
+            h_unsqueezed = h.unsqueeze(0)
+            attn_output, _ = self.self_attention(h_unsqueezed, h_unsqueezed, h_unsqueezed)
+            h = attn_output.squeeze(0)
 
-   def encoder_decoder_attention(self, Q, K, V):
-        head_dim = Q.shape[-1] // self.num_heads
-        Q, K, V = ensure_correct_dimensions(Q, K, V, self.num_heads, head_dim) 
-    
-        # Calculate attention scores between decoder and encoder
-        scores = np.matmul(Q, K.transpose(-2, -1)) / np.sqrt(head_dim)
-    
-        # Calculate attention weights
-        weights = softmax(scores)
-    
-        # Apply weights to encoder outputs to get context vector
-        outputs = []
-        for i in range(self.num_heads):
-            q = Q[:, :, i, :]
-            k = K[:, :, i, :]
-            v = V[:, :, i, :]
-            outputs.append(np.matmul(weights[:, :, i, :], v))
+            # Output layer
+            output = self.output_layer(h)
+            outputs.append(output)
 
-        return np.concatenate(outputs, axis=-1)
+        outputs = torch.stack(outputs)
+        return outputs, hidden
 
-    def decoder_block(self, x, encoder_output, mask=None): 
-        # Masked multi-head self-attention
-        x = self.masked_multi_head_attention(x, x, x, mask)
-        x = layer_norm(x + attn_output) 
+# Example usage
+input_dim = 10
+hidden_dim = 20
+output_dim = 5
+num_layers = 2
+seq_len = 15
+batch_size = 32
 
-        # Encoder-decoder attention
-        x = self.encoder_decoder_attention(x, encoder_output, encoder_output)
-        x = layer_norm(x + attn_output) 
-    
-        # Feed-forward
-        ff_output = feed_forward_network(x)
-        x = layer_norm(x + ff_output)
+model = GRUCellTransformer(input_dim, hidden_dim, output_dim, num_layers)
+input_data = torch.randn(seq_len, batch_size, input_dim)
+output, hidden = model(input_data)
 
-        return x
+print(f"Output shape: {output.shape}")
+print(f"Hidden state shape: {len(hidden)}, {hidden[0].shape}")
