@@ -1,9 +1,20 @@
-# ONI-Public
-A little bit of machine learning stuff might make it bigger or put the full version on private with requests.
+# Oni
 
+Oni is a modular, multi-modal AGI (Artificial General Intelligence) system designed for fast learning, decision making, and interaction with multiple environments (text, image, audio). Oni integrates a transformer-based NLP core, Vision Transformer, and diffusion models to form an intelligent, adaptable system.
 
-The ONI library is a comprehensive collection of machine learning models and utilities designed to facilitate the development of advanced neural network architectures and applications. This versatile library includes a variety of pre-built models and components such as custom transformers, standard transformers, recurrent neural networks (RNNs), and convolutional neural networks (CNNs), catering to a wide range of tasks from natural language processing to image recognition.
+## Features
 
-Key features of the ONI library include:
+- **Modular Architecture**: Oni can be extended or optimized by adding or modifying individual modules.
+- **Multi-modal Learning**: Supports NLP, Vision, and Audio inputs.
+- **Homeostatic Controller**: Adjusts internal parameters dynamically to maintain system stability.
+- **Neural Networks**: Utilizes advanced transformer-based architectures.
+- **Fast and Efficient**: Designed for quick decision-making and real-time interactions.
 
-Transformers: Implements both Keras and Torch versions, allowing for flexibility in model choice and deployment based on specific framework preferences. Tradebot Algorithms: Provides algorithms optimized for automated trading, integrating machine learning into financial strategy development. Flask App Designs: Includes templates and utilities for deploying machine learning models as web applications using Flask, making it easier to move from model training to production. RNNs and CNNs: Offers robust support for these foundational neural network architectures, suitable for a variety of sequential and spatial data processing tasks.
+## Installation
+
+To install Oni, clone the repository and install the dependencies:
+
+```bash
+git clone https://github.com/ahricat/oni.git
+cd oni
+pip install -r requirements.txt
