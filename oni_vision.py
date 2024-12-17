@@ -7,7 +7,9 @@ import numpy as np
 import cv2 
 import PIL
 import PIL.ImageGrab
-
+# Load model directly
+from transformers import AutoProcessor, AutoModelForImageTextToText
+""" original contains locked pretrained vision to text but the model supports it if trained"""
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
         super(ConvBlock, self).__init__()
