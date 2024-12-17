@@ -11,37 +11,37 @@ from torchvision.utils import save_image
 import os
 import numpy as np
 
-image_dir = 'C:/users/jonny/Documents/PATH/ONI/knowledge_base/picturememory/'
-os.makedirs(image_dir, exist_ok=True)
+    
+class ReformerAttention(nn.Module):
+    def __init__(self, dim, num_heads, dropout=0.1):
+        super(ReformerAttention, self).__init__()
+        self.dim = dim
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
 
-class CustomImageDataset(Dataset):
-    def __init__(self, img_dir, transform=None, image_extensions=None):
-        if image_extensions is None:
-            image_extensions = ('.png','.jpg', '.jpeg', '.bmp','.gif')
-            self.img_dir = image_dir
-            self.transform = transform
-            self.img_names = [img for img in os.listdir(img_dir) if img.endswith(image_extensions) and os.path.isfile(os.path.join(img_dir, img))]
+        self.qkv_proj = nn.Linear(dim, dim * 3, bias=False)
+        self.out_proj = nn.Linear(dim, dim)
 
-    def __len__(self):
-        return len(self.img_names)
+        self.dropout = nn.Dropout(dropout)
+        self.multihead_attn = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True)
 
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_names[idx])
+    def forward(self, x, mask=None):
+        batch_size, seq_length, dim = x.size()
+        assert dim == self.dim, f"Input dimension {dim} does not match layer dimension {self.dim}"
 
-        image = Image.open(img_path).convert("RGB")
-        if self.transform:
-            image = self.transform(image)
-            return image
-        
+        qkv = self.qkv_proj(x)
+        q, k, v = qkv.chunk(3, dim=-1)
 
-transform = transforms.Compose([
-    transforms.Resize((64, 64)),  # Resize images to 64x64 (or any desired size)
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
+        if mask is not None:
+            attn_mask = mask.unsqueeze(1).repeat(1, seq_length, 1)
+        else:
+            attn_mask = None
 
-  # Update this with the path to your folder
-dataset2 = CustomImageDataset(image_dir, transform=transform)
+        attn_output, _ = self.multihead_attn(q, k, v, attn_mask=attn_mask)
+        attn_output = self.dropout(attn_output)
+        output = self.out_proj(attn_output)
+
+        return output + x
 
 
 class FatDiffuser(nn.Module):
