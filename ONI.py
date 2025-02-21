@@ -20,6 +20,15 @@ import torch.autograd as autograd  # If used elsewhere in the code
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from transformers.image_utils import load_image
+from ONI-Public.modules import file_preprocessor
+from ONI-Public.modules import oni_vision as vision
+from ONI-Public.modules import oni_audio as audio
+from ONI-Public.modules import oni_MM_attention as MultiModalAttention
+from ONI-Public.modules import oni_memory as memory 
+from ONI-Public.modules import oni_netmonitor as netmon
+from ONI-Public.modules import oni_portscanner as ps
+import oni_metacognition as MetaCognition
+import oni_homeostasis as HomeostaticController
 
 # Define the Experience Replay Buffer
 class ExperienceReplayBuffer:
