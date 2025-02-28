@@ -30,7 +30,7 @@ from ONI-Public.modules import oni_portscanner as ps
 from ONI-Public.modules import oni_executive_function as exec_func
 import oni_metacognition as MetaCognition
 import oni_homeostasis as HomeostaticController
-
+from ONI-Public.modules.oni_NLP import OptimizedNLPModule as nlp_module
 # Define the Experience Replay Buffer
 class ExperienceReplayBuffer:
     def __init__(self, buffer_size=10000, batch_size=64):
