@@ -16,6 +16,11 @@ import base64
 from PIL import Image
 import numpy as np
 import io
+from rouge import Rouge
+import torch.optim as optim
+
+
+
 
 hidden_dim = 896
 num_heads = 24
@@ -758,22 +763,6 @@ class MixingNetwork(nn.Module):
         output = gates[:, :, 0:1] * ssm_out + gates[:, :, 1:2] * attn_out
         
         return output
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-import random
-import re
-from typing import Any, List, Dict, Optional, Union, Tuple  # Added 'Any' to imports
-from torch.nn.utils.rnn import pad_sequence
-from rouge import Rouge
-import torch.optim as optim
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from rouge import Rouge
-
 
 class PPOOptimizer:
     """
