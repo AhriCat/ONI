@@ -26,7 +26,7 @@ class ResearchData:
         return parsed_data
 
 # Usage
-api_key = '5ca335203c1425c4161196327c12909e8a84a4f422adbef1fcf6d41d6c101f34'  # Replace with your actual API key
+api_key = '---'  # Replace with your actual API key
 research_assistant = ResearchData(api_key)
 query = "happiness"
 try:
