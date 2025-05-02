@@ -307,5 +307,5 @@ class ONIWithWebSearch(ONIWithRAG):
             logger.error(f"Error in ONIWithWebSearch.run: {e}")
             return "I encountered an error processing your request. Please try again."
 
-pdf_folder = "C:/users/jonny/Documents/PATH/ONI/knowledge_base/remembered_texts/test"
+pdf_folder = "PATH/ONI/knowledge_base/remembered_texts/test"
 oni_with_search = ONIWithWebSearch(pdf_folder)
