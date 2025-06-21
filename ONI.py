@@ -20,17 +20,242 @@ import torch.autograd as autograd  # If used elsewhere in the code
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from transformers.image_utils import load_image
-from ONI-Public.modules import file_preprocessor
-from ONI-Public.modules import oni_vision as vision
-from ONI-Public.modules import oni_audio as audio
-from ONI-Public.modules import oni_MM_attention as MultiModalAttention
-from ONI-Public.modules import oni_memory as memory 
-from ONI-Public.modules import oni_netmonitor as netmon
-from ONI-Public.modules import oni_portscanner as ps
-from ONI-Public.modules import oni_executive_function as exec_func
-import oni_metacognition as MetaCognition
-import oni_homeostasis as HomeostaticController
-from ONI-Public.modules.oni_NLP import OptimizedNLPModule as nlp_module
+import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Import modules with error handling
+try:
+    from modules import file_preprocessor
+except ImportError:
+    logger.warning("file_preprocessor not found, using fallback")
+    class file_preprocessor:
+        @staticmethod
+        def process_file(path):
+            return ""
+
+try:
+    from modules import oni_vision as vision
+except ImportError:
+    logger.warning("oni_vision not found, using fallback")
+    class vision:
+        @staticmethod
+        def process_input(*args, **kwargs):
+            return torch.zeros(1, 896), 0.0
+
+try:
+    from modules import oni_audio as audio
+except ImportError:
+    logger.warning("oni_audio not found, using fallback")
+    class audio:
+        @staticmethod
+        def forward(*args, **kwargs):
+            return torch.zeros(1, 896), 0.0
+
+try:
+    from modules import oni_MM_attention as MultiModalAttention
+except ImportError:
+    logger.warning("oni_MM_attention not found, using fallback")
+    class MultiModalAttention:
+        def __init__(self, dim):
+            self.dim = dim
+        def forward(self, x1, x2, x3):
+            return x1
+
+try:
+    from modules import oni_memory as memory 
+except ImportError:
+    logger.warning("oni_memory not found, using fallback")
+    class memory:
+        @staticmethod
+        def update_memory(*args, **kwargs):
+            pass
+
+try:
+    from modules import oni_netmonitor as netmon
+except ImportError:
+    logger.warning("oni_netmonitor not found, using fallback")
+    class netmon:
+        @staticmethod
+        def start():
+            pass
+
+try:
+    from modules import oni_portscanner as ps
+except ImportError:
+    logger.warning("oni_portscanner not found, using fallback")
+    class ps:
+        @staticmethod
+        def start_scan():
+            pass
+
+try:
+    from modules import oni_executive_function as exec_func
+except ImportError:
+    logger.warning("oni_executive_function not found, using fallback")
+    class exec_func:
+        @staticmethod
+        def execute(*args, **kwargs):
+            pass
+
+try:
+    from modules import oni_metacognition as MetaCognition
+except ImportError:
+    logger.warning("oni_metacognition not found, using fallback")
+    class MetaCognition:
+        def __init__(self, dim):
+            pass
+        def forward(self, x):
+            return x, 0.5, []
+
+try:
+    from modules import oni_homeostasis as HomeostaticController
+except ImportError:
+    logger.warning("oni_homeostasis not found, using fallback")
+    class HomeostaticController:
+        def __init__(self, input_dim, hidden_dim):
+            pass
+        def forward(self, x, state):
+            return x, 0.0
+
+try:
+    from modules.oni_NLP import OptimizedNLPModule as nlp_module
+except ImportError:
+    logger.warning("oni_NLP not found, using fallback")
+    class nlp_module:
+        def __init__(self, config):
+            self.embedding = nn.Embedding(1000, 896)
+        def forward(self, x, y=None):
+            return x, 0.0
+        def identify_tasks(self, text):
+            return []
+        def generate(self, text):
+            return "Generated response"
+
+# Import tools with error handling
+try:
+    from tools.calculator import Calculator
+    calculator = Calculator()
+except ImportError:
+    logger.warning("Calculator not found, using fallback")
+    class Calculator:
+        def calculate(self, expr):
+            return "Calculation not available"
+    calculator = Calculator()
+
+try:
+    from tools.drawer import pipe
+except ImportError:
+    logger.warning("Drawer not found, using fallback")
+    def pipe(*args, **kwargs):
+        return type('obj', (object,), {'images': [None]})()
+
+try:
+    from tools.animator import pipeline
+except ImportError:
+    logger.warning("Animator not found, using fallback")
+    def pipeline(*args, **kwargs):
+        return type('obj', (object,), {'frames': [[]]})()
+
+# Import external models with error handling
+try:
+    from transformers import AutoTokenizer, AutoModelForCausalLM, AutoProcessor, AutoModelForImageTextToText
+    
+    # Try to load Qwen model
+    try:
+        tokenizerQ = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-7B-Instruct")
+        qwen = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-Coder-7B-Instruct", torch_dtype=torch.bfloat16, device_map="auto")
+    except Exception as e:
+        logger.warning(f"Failed to load Qwen model: {e}")
+        tokenizerQ = None
+        qwen = None
+    
+    # Try to load vision model
+    try:
+        processor = AutoProcessor.from_pretrained("microsoft/Phi-3.5-vision-instruct")
+        model = AutoModelForImageTextToText.from_pretrained("microsoft/Phi-3.5-vision-instruct", torch_dtype=torch.bfloat16, device_map="auto")
+    except Exception as e:
+        logger.warning(f"Failed to load vision model: {e}")
+        processor = None
+        model = None
+        
+except ImportError:
+    logger.warning("Transformers not available, using fallbacks")
+    tokenizerQ = None
+    qwen = None
+    processor = None
+    model = None
+
+# Import trading module with error handling
+try:
+    from modules.oni_crypto_trade import TradingBot
+    trader = TradingBot
+except ImportError:
+    logger.warning("Trading module not found, using fallback")
+    class TradingBot:
+        def __init__(self, *args, **kwargs):
+            pass
+    trader = TradingBot
+
+# Import tokenizer with error handling
+try:
+    from modules.oni_Tokenizer import MultitokenBPETokenizer
+    tokenizer = MultitokenBPETokenizer()
+except ImportError:
+    logger.warning("Tokenizer not found, using fallback")
+    class MultitokenBPETokenizer:
+        def encode(self, text):
+            return [1, 2, 3]
+        def decode(self, ids):
+            return "decoded text"
+    tokenizer = MultitokenBPETokenizer()
+
+# Fallback implementations for missing components
+class DynamicModuleInjector:
+    def inject_module(self, *args, **kwargs):
+        return None
+    def forward(self, *args, **kwargs):
+        return None
+
+class DynamicSynapse(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.linear = nn.Linear(input_dim, output_dim)
+    def forward(self, x):
+        return self.linear(x)
+
+class EnergyBasedSynapse(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.linear = nn.Linear(input_dim, output_dim)
+    def forward(self, x):
+        return self.linear(x), 0.0
+
+class SparseFocusedGroupAttention(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.attention = nn.MultiheadAttention(hidden_dim, 8, batch_first=True)
+    def forward(self, x, hidden=None):
+        out, _ = self.attention(x, x, x)
+        return out, hidden
+
+class RBM:
+    def __init__(self, num_visible, num_hidden):
+        self.num_visible = num_visible
+        self.num_hidden = num_hidden
+    def run_visible(self, x):
+        return x
+
+# Initialize fallback components
+vision_system = vision
+controller = HomeostaticController
+
 # Define the Experience Replay Buffer
 class ExperienceReplayBuffer:
     def __init__(self, buffer_size=10000, batch_size=64):
@@ -69,12 +294,12 @@ class OniMicro(nn.Module):
         self.audio_stream = None
         self.pyaudio_instance = None
         self.tokenizer = tokenizer
-        self.embedding = nlp_module.embedding
+        self.embedding = nlp_module.embedding if hasattr(nlp_module, 'embedding') else nn.Embedding(1000, 896)
         self.attention = SparseFocusedGroupAttention(hidden_dim)
         self.memory = memory 
-        self.hm = self.share_memory 
-        self.memnet = finder.use_hopfield_network
-        self.findpattern = finder.find_patterns
+        self.hm = self.share_memory if hasattr(self, 'share_memory') else lambda: None
+        self.memnet = lambda: None  # finder.use_hopfield_network
+        self.findpattern = lambda: None  # finder.find_patterns
         self.rbm = RBM(num_visible=256, num_hidden=64)
         self.use_rbm = False
         self.dynamic_layer = EnergyBasedSynapse(input_dim, output_dim)
@@ -84,7 +309,7 @@ class OniMicro(nn.Module):
         self.vision_module = vision_system
         self.visionprocessor = processor
         self.vision_to_text = model
-        self.audio_module = MiniAudioModule(1,896,896,128,1000000)
+        self.audio_module = audio  # MiniAudioModule(1,896,896,128,1000000)
         self.multi_modal_attention = MultiModalAttention(hidden_dim)
         self.multi_modal_fusion = nn.Linear(hidden_dim * 3, hidden_dim)
         self.homeostatic_controller = HomeostaticController(hidden_dim, hidden_dim)
@@ -98,7 +323,7 @@ class OniMicro(nn.Module):
         self.calculator = calculator
         #self.yt_downloader = yt_downloader
         self.trader = trader 
-        self.browser = webdriver.Chrome()
+        self.browser = webdriver.Chrome() if 'webdriver' in globals() else None
         self.networkmonitor = netmon
         self.portscanner = ps
         #self.nmap = nm
@@ -240,9 +465,8 @@ class OniMicro(nn.Module):
         for task in task_list:
             print(f"Inferred task: {task}")
             self.execute_task(task)
-    import os
-
-    def scan_files_for_models(directory: str) -> List[str]:
+    
+    def scan_files_for_models(self, directory: str):
         """
         Scans a directory for model files.
         """
@@ -396,7 +620,7 @@ class OniMicro(nn.Module):
         """
         return self.memory.spatial_memory.get_current_room_data()  # Changed to self.memory.spatial_memory
     
-    def choose_action(self, state: np.ndarray, hidden=None) -> Tuple[int, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+    def choose_action(self, state: np.ndarray, hidden=None):
         if np.random.rand() < self.exploration_rate:
             # Explore: choose a random action
             return np.random.randint(self.action_size), hidden
@@ -466,7 +690,7 @@ class OniMicro(nn.Module):
         else:
             return "recalibrate based on negative output"
     
-    def generate_response(self, input_text: str, hidden: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[str, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+    def generate_response(self, input_text: str, hidden=None):
         # Tokenize the input text
         tokenized_input = self.tokenizer.encode(input_text)
         
