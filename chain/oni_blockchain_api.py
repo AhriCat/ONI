@@ -3,13 +3,15 @@ import json
 import hashlib
 import time
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 import threading
 import os
 from pathlib import Path
+import uuid
+from werkzeug.utils import secure_filename
 
 # Import ONI blockchain components
-from chain.oni_proof_of_compute import Blockchain, Transaction, Block, ONINode
+from chain.oni_proof_of_compute import Blockchain, Transaction, Block, ONINode, MemPool
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,6 +29,7 @@ def initialize_blockchain(node_id: str, private_key: str):
     global node
     with node_lock:
         node = ONINode(node_id, private_key)
+        node.start()  # Start background threads
         logger.info(f"Initialized blockchain node: {node_id}")
 
 # API routes
@@ -36,7 +39,8 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "timestamp": time.time(),
-        "node_id": node.node_id if node else None
+        "node_id": node.node_id if node else None,
+        "version": "1.0.0"
     })
 
 @app.route('/balance/<address>', methods=['GET'])
@@ -64,24 +68,44 @@ def new_transaction():
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
         
+    # Get optional fields
+    gas_price = data.get('gas_price', 0.00001)
+    gas_limit = data.get('gas_limit', 100000)
+    model_update = data.get('model_update')
+    tx_data = data.get('data')
+    private_key = data.get('private_key')
+    
     # Create transaction
     success = node.blockchain.add_transaction(
         sender=data['sender'],
         recipient=data['recipient'],
         amount=data['amount'],
-        model_update=data.get('model_update'),
-        private_key=data.get('private_key')
+        gas_price=gas_price,
+        gas_limit=gas_limit,
+        model_update=model_update,
+        data=tx_data,
+        private_key=private_key
     )
     
     if success:
+        # Get the transaction from mempool
+        tx_hash = None
+        for tx in node.blockchain.mempool.transactions.values():
+            if (tx.sender == data['sender'] and 
+                tx.recipient == data['recipient'] and 
+                tx.amount == data['amount']):
+                tx_hash = tx.tx_hash
+                break
+        
         # Broadcast transaction to network
-        transaction = node.blockchain.pending_transactions[-1]
-        node.broadcast_transaction(transaction)
+        if tx_hash:
+            transaction = node.blockchain.mempool.transactions[tx_hash]
+            node.broadcast_transaction(transaction)
         
         return jsonify({
             "success": True,
             "message": "Transaction added to pending transactions",
-            "transaction_hash": transaction.compute_hash(),
+            "transaction_hash": tx_hash,
             "timestamp": time.time()
         })
     else:
@@ -90,6 +114,79 @@ def new_transaction():
             "message": "Failed to add transaction",
             "timestamp": time.time()
         }), 400
+
+@app.route('/transactions/batch', methods=['POST'])
+def batch_transactions():
+    """Process a batch of transactions."""
+    if not node:
+        return jsonify({"error": "Node not initialized"}), 500
+        
+    data = request.get_json()
+    if 'transactions' not in data or not isinstance(data['transactions'], list):
+        return jsonify({"error": "Invalid batch format"}), 400
+        
+    results = []
+    for tx_data in data['transactions']:
+        required_fields = ['sender', 'recipient', 'amount']
+        if not all(field in tx_data for field in required_fields):
+            results.append({
+                "success": False,
+                "message": "Missing required fields",
+                "transaction_data": tx_data
+            })
+            continue
+            
+        # Get optional fields
+        gas_price = tx_data.get('gas_price', 0.00001)
+        gas_limit = tx_data.get('gas_limit', 100000)
+        model_update = tx_data.get('model_update')
+        tx_data_content = tx_data.get('data')
+        private_key = tx_data.get('private_key')
+        
+        # Create transaction
+        success = node.blockchain.add_transaction(
+            sender=tx_data['sender'],
+            recipient=tx_data['recipient'],
+            amount=tx_data['amount'],
+            gas_price=gas_price,
+            gas_limit=gas_limit,
+            model_update=model_update,
+            data=tx_data_content,
+            private_key=private_key
+        )
+        
+        if success:
+            # Get the transaction from mempool
+            tx_hash = None
+            for tx in node.blockchain.mempool.transactions.values():
+                if (tx.sender == tx_data['sender'] and 
+                    tx.recipient == tx_data['recipient'] and 
+                    tx.amount == tx_data['amount']):
+                    tx_hash = tx.tx_hash
+                    break
+            
+            # Broadcast transaction to network
+            if tx_hash:
+                transaction = node.blockchain.mempool.transactions[tx_hash]
+                node.broadcast_transaction(transaction)
+            
+            results.append({
+                "success": True,
+                "message": "Transaction added to pending transactions",
+                "transaction_hash": tx_hash
+            })
+        else:
+            results.append({
+                "success": False,
+                "message": "Failed to add transaction",
+                "transaction_data": tx_data
+            })
+    
+    return jsonify({
+        "success": True,
+        "results": results,
+        "timestamp": time.time()
+    })
 
 @app.route('/mine', methods=['POST'])
 def mine():
@@ -100,27 +197,21 @@ def mine():
     data = request.get_json()
     miner = data.get('miner', node.node_id)
     
-    # Mine block
-    new_block = node.mine_pending_transactions()
+    # Start mining in a separate thread to avoid blocking
+    def mine_async():
+        new_block = node.mine_pending_transactions()
+        if new_block:
+            # Broadcast block to network
+            node.broadcast_block(new_block)
     
-    if new_block:
-        # Broadcast block to network
-        node.broadcast_block(new_block)
-        
-        return jsonify({
-            "success": True,
-            "message": "Block mined successfully",
-            "block_index": new_block.index,
-            "block_hash": new_block.hash,
-            "transactions": len(new_block.transactions),
-            "timestamp": time.time()
-        })
-    else:
-        return jsonify({
-            "success": False,
-            "message": "No transactions to mine",
-            "timestamp": time.time()
-        }), 400
+    threading.Thread(target=mine_async).start()
+    
+    return jsonify({
+        "success": True,
+        "message": "Mining started",
+        "miner": miner,
+        "timestamp": time.time()
+    })
 
 @app.route('/chain', methods=['GET'])
 def get_chain():
@@ -137,7 +228,22 @@ def get_chain():
             "hash": block.hash,
             "nonce": block.nonce,
             "merkle_root": block.merkle_root,
-            "transactions": [tx.to_dict() for tx in block.transactions]
+            "difficulty": block.difficulty,
+            "gas_used": block.gas_used,
+            "size": block.size,
+            "transactions": [
+                {
+                    "tx_hash": tx.tx_hash,
+                    "sender": tx.sender,
+                    "recipient": tx.recipient,
+                    "amount": tx.amount,
+                    "gas_price": tx.gas_price,
+                    "gas_limit": tx.gas_limit,
+                    "timestamp": tx.timestamp,
+                    "has_model_update": tx.model_update is not None,
+                    "has_data": tx.data is not None
+                } for tx in block.transactions
+            ]
         }
         chain_data.append(block_data)
         
@@ -153,13 +259,77 @@ def get_pending_transactions():
     if not node:
         return jsonify({"error": "Node not initialized"}), 500
         
-    transactions = [tx.to_dict() for tx in node.blockchain.pending_transactions]
+    transactions = [
+        {
+            "tx_hash": tx.tx_hash,
+            "sender": tx.sender,
+            "recipient": tx.recipient,
+            "amount": tx.amount,
+            "gas_price": tx.gas_price,
+            "gas_limit": tx.gas_limit,
+            "fee": tx.calculate_fee(),
+            "timestamp": tx.timestamp,
+            "has_model_update": tx.model_update is not None,
+            "has_data": tx.data is not None
+        } for tx in node.blockchain.mempool.transactions.values()
+    ]
     
     return jsonify({
         "transactions": transactions,
         "count": len(transactions),
         "timestamp": time.time()
     })
+
+@app.route('/transaction/<tx_hash>', methods=['GET'])
+def get_transaction(tx_hash: str):
+    """Get a transaction by its hash."""
+    if not node:
+        return jsonify({"error": "Node not initialized"}), 500
+        
+    # Check mempool first
+    if node.blockchain.mempool.contains_transaction(tx_hash):
+        tx = node.blockchain.mempool.transactions[tx_hash]
+        return jsonify({
+            "tx_hash": tx.tx_hash,
+            "sender": tx.sender,
+            "recipient": tx.recipient,
+            "amount": tx.amount,
+            "gas_price": tx.gas_price,
+            "gas_limit": tx.gas_limit,
+            "fee": tx.calculate_fee(),
+            "timestamp": tx.timestamp,
+            "status": "pending",
+            "has_model_update": tx.model_update is not None,
+            "has_data": tx.data is not None,
+            "model_update": tx.model_update,
+            "data": tx.data
+        })
+    
+    # Check blockchain
+    tx = node.blockchain.get_transaction(tx_hash)
+    if tx:
+        block_idx, tx_idx = node.blockchain.tx_index[tx_hash]
+        block = node.blockchain.get_block_by_index(block_idx)
+        
+        return jsonify({
+            "tx_hash": tx.tx_hash,
+            "sender": tx.sender,
+            "recipient": tx.recipient,
+            "amount": tx.amount,
+            "gas_price": tx.gas_price,
+            "gas_limit": tx.gas_limit,
+            "fee": tx.calculate_fee(),
+            "timestamp": tx.timestamp,
+            "status": "confirmed",
+            "block_index": block_idx,
+            "block_hash": block.hash,
+            "has_model_update": tx.model_update is not None,
+            "has_data": tx.data is not None,
+            "model_update": tx.model_update,
+            "data": tx.data
+        })
+    
+    return jsonify({"error": "Transaction not found"}), 404
 
 @app.route('/models/updates', methods=['GET'])
 @app.route('/models/updates/<model_id>', methods=['GET'])
@@ -181,6 +351,7 @@ def get_model_updates(model_id=None):
                 updates.append({
                     "block_index": block.index,
                     "block_hash": block.hash,
+                    "tx_hash": tx.tx_hash,
                     "timestamp": tx.timestamp,
                     "sender": tx.sender,
                     "recipient": tx.recipient,
@@ -303,36 +474,121 @@ def consensus():
         "timestamp": time.time()
     })
 
+@app.route('/gas-price', methods=['GET'])
+def get_gas_price():
+    """Get the current gas price."""
+    if not node:
+        return jsonify({"error": "Node not initialized"}), 500
+        
+    # In a real implementation, this would calculate based on network congestion
+    # For this example, we'll return a fixed value
+    return jsonify({
+        "gas_price": node.blockchain.chain[-1].transactions[0].gas_price if node.blockchain.chain and node.blockchain.chain[-1].transactions else 0.00001,
+        "timestamp": time.time()
+    })
+
+@app.route('/estimate-gas', methods=['POST'])
+def estimate_gas():
+    """Estimate gas for a transaction."""
+    if not node:
+        return jsonify({"error": "Node not initialized"}), 500
+        
+    data = request.get_json()
+    required_fields = ['sender', 'recipient', 'amount']
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+        
+    # Create a dummy transaction to estimate gas
+    tx = Transaction(
+        sender=data['sender'],
+        recipient=data['recipient'],
+        amount=data['amount'],
+        gas_price=data.get('gas_price', 0.00001),
+        gas_limit=data.get('gas_limit', 100000),
+        model_update=data.get('model_update'),
+        data=data.get('data')
+    )
+    
+    gas = tx.calculate_gas()
+    
+    return jsonify({
+        "gas": gas,
+        "fee": gas * tx.gas_price,
+        "timestamp": time.time()
+    })
+
 @app.route('/proof-of-compute/submit', methods=['POST'])
 def submit_proof_of_compute():
     """Submit proof of compute for a model update."""
     if not node:
         return jsonify({"error": "Node not initialized"}), 500
         
-    data = request.get_json()
-    required_fields = ['model_id', 'version', 'metrics', 'compute_time']
-    
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
+    # Check if form data or JSON
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form
+        required_fields = ['model_id', 'version', 'metrics', 'compute_time']
         
-    # Check if model file was uploaded
-    model_file = request.files.get('model_file')
-    if not model_file:
-        return jsonify({"error": "Missing model file"}), 400
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        # Check if model file was uploaded
+        if 'model_file' not in request.files:
+            return jsonify({"error": "Missing model file"}), 400
+            
+        model_file = request.files['model_file']
+        if model_file.filename == '':
+            return jsonify({"error": "Empty model filename"}), 400
+            
+        # Save model file temporarily
+        temp_dir = Path("./temp")
+        temp_dir.mkdir(exist_ok=True)
         
-    # Save model file temporarily
-    temp_dir = Path("./temp")
-    temp_dir.mkdir(exist_ok=True)
-    
-    model_path = temp_dir / f"{data['model_id']}_{data['version']}_{int(time.time())}"
-    model_file.save(model_path)
-    
-    try:
+        filename = secure_filename(model_file.filename)
+        model_path = temp_dir / f"{data['model_id']}_{data['version']}_{int(time.time())}_{filename}"
+        model_file.save(model_path)
+        
+        try:
+            # Parse metrics
+            metrics = json.loads(data['metrics']) if isinstance(data['metrics'], str) else data['metrics']
+            
+            # Submit model update
+            success = node.submit_model_update(
+                model_id=data['model_id'],
+                version=data['version'],
+                update_data={"path": str(model_path)},
+                metrics=metrics
+            )
+            
+            if success:
+                return jsonify({
+                    "success": True,
+                    "message": "Proof of compute submitted successfully",
+                    "timestamp": time.time()
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "Failed to submit proof of compute",
+                    "timestamp": time.time()
+                }), 400
+        finally:
+            # Clean up temporary file
+            if model_path.exists():
+                os.remove(model_path)
+    else:
+        # JSON data
+        data = request.get_json()
+        required_fields = ['model_id', 'version', 'metrics', 'update_data']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+            
         # Submit model update
         success = node.submit_model_update(
             model_id=data['model_id'],
             version=data['version'],
-            update_data={"path": str(model_path)},
+            update_data=data['update_data'],
             metrics=data['metrics']
         )
         
@@ -348,10 +604,19 @@ def submit_proof_of_compute():
                 "message": "Failed to submit proof of compute",
                 "timestamp": time.time()
             }), 400
-    finally:
-        # Clean up temporary file
-        if model_path.exists():
-            os.remove(model_path)
+
+@app.route('/node/status', methods=['GET'])
+def get_node_status():
+    """Get node status."""
+    if not node:
+        return jsonify({"error": "Node not initialized"}), 500
+        
+    status = node.get_node_status()
+    
+    return jsonify({
+        "status": status,
+        "timestamp": time.time()
+    })
 
 # Start the blockchain node
 def start_blockchain_node(node_id: str, private_key: str, host: str = '0.0.0.0', port: int = 5000):
@@ -368,7 +633,19 @@ def start_blockchain_node(node_id: str, private_key: str, host: str = '0.0.0.0',
     initialize_blockchain(node_id, private_key)
     
     # Start API server
-    app.run(host=host, port=port)
+    app.run(host=host, port=port, threaded=True)
+
+# Shutdown handler
+def shutdown_node():
+    """Shutdown the blockchain node."""
+    global node
+    if node:
+        node.stop()
+        logger.info("Blockchain node shutdown complete")
+
+# Register shutdown handler
+import atexit
+atexit.register(shutdown_node)
 
 if __name__ == "__main__":
     # Generate a simple private key if not provided

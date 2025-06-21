@@ -3,13 +3,16 @@ import json
 import hashlib
 import time
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+import uuid
+from typing import Dict, List, Optional, Any, Tuple, Union
 from pathlib import Path
 import os
+import threading
+import queue
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("ONI-Blockchain-Client")
+logger = logging.getLogger(__name__)
 
 class ONIBlockchainClient:
     """Client for interacting with the ONI blockchain network."""
@@ -36,6 +39,17 @@ class ONIBlockchainClient:
         
         if api_key:
             self.headers["X-API-Key"] = api_key
+            
+        # Transaction queue for batching
+        self.tx_queue = queue.Queue()
+        self.batch_thread = None
+        self.is_batching = False
+        self.batch_size = 20
+        self.batch_timeout = 2  # seconds
+        
+        # Cache for responses
+        self.cache = {}
+        self.cache_timeout = 30  # seconds
     
     def _derive_public_key(self, private_key: str) -> str:
         """Derive public key from private key (simplified)."""
@@ -48,6 +62,24 @@ class ONIBlockchainClient:
             
         data_str = json.dumps(data, sort_keys=True)
         return hashlib.sha256((data_str + self.private_key).encode()).hexdigest()
+    
+    def _generate_nonce(self) -> str:
+        """Generate a unique nonce for transactions."""
+        return str(uuid.uuid4())
+    
+    def _get_cached_response(self, cache_key: str) -> Optional[Dict]:
+        """Get a cached response if it exists and is not expired."""
+        if cache_key in self.cache:
+            cached_data, timestamp = self.cache[cache_key]
+            if time.time() - timestamp < self.cache_timeout:
+                return cached_data
+            # Remove expired cache entry
+            del self.cache[cache_key]
+        return None
+    
+    def _cache_response(self, cache_key: str, response: Dict) -> None:
+        """Cache a response with the current timestamp."""
+        self.cache[cache_key] = (response, time.time())
     
     def get_balance(self, address: Optional[str] = None) -> int:
         """
@@ -63,29 +95,46 @@ class ONIBlockchainClient:
         if not address:
             raise ValueError("Address required")
             
+        cache_key = f"balance_{address}"
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response["balance"]
+            
         try:
             response = self.session.get(
                 f"{self.node_url}/balance/{address}",
-                headers=self.headers
+                headers=self.headers,
+                timeout=10
             )
             response.raise_for_status()
-            return response.json()["balance"]
+            result = response.json()
+            
+            # Cache the response
+            self._cache_response(cache_key, result)
+            
+            return result["balance"]
         except Exception as e:
             logger.error(f"Failed to get balance: {e}")
             return 0
     
     def submit_transaction(self, recipient: str, amount: int, 
-                          model_update: Optional[Dict] = None) -> bool:
+                          gas_price: float = 0.00001, gas_limit: int = 100000,
+                          model_update: Optional[Dict] = None, data: Optional[str] = None,
+                          batch: bool = False) -> Union[str, bool]:
         """
         Submit a transaction to the blockchain.
         
         Args:
             recipient: Address of the recipient
             amount: Amount to transfer
+            gas_price: Price per unit of gas
+            gas_limit: Maximum gas allowed for transaction
             model_update: Optional AI model update data
+            data: Optional transaction data
+            batch: Whether to batch this transaction with others
             
         Returns:
-            bool: True if transaction was submitted successfully
+            str: Transaction hash if successful, or False if failed
         """
         if not self.public_key:
             raise ValueError("Public key required for transactions")
@@ -94,7 +143,11 @@ class ONIBlockchainClient:
             "sender": self.public_key,
             "recipient": recipient,
             "amount": amount,
+            "gas_price": gas_price,
+            "gas_limit": gas_limit,
             "model_update": model_update,
+            "data": data,
+            "nonce": self._generate_nonce(),
             "timestamp": time.time()
         }
         
@@ -102,24 +155,101 @@ class ONIBlockchainClient:
         if self.private_key:
             transaction["signature"] = self._sign_data(transaction)
         
+        # If batching is enabled, add to queue and return transaction ID
+        if batch:
+            tx_id = hashlib.sha256(json.dumps(transaction, sort_keys=True).encode()).hexdigest()
+            self.tx_queue.put((tx_id, transaction))
+            
+            # Start batch processor if not already running
+            self._ensure_batch_processor()
+            
+            return tx_id
+        
+        # Otherwise, submit immediately
         try:
             response = self.session.post(
                 f"{self.node_url}/transactions/new",
                 headers=self.headers,
-                json=transaction
+                json=transaction,
+                timeout=10
             )
             response.raise_for_status()
             result = response.json()
             
             if result.get("success"):
                 logger.info(f"Transaction submitted: {self.public_key} -> {recipient}, {amount} ONI")
-                return True
+                return result.get("transaction_hash", "")
             else:
                 logger.warning(f"Transaction failed: {result.get('message')}")
                 return False
         except Exception as e:
             logger.error(f"Failed to submit transaction: {e}")
             return False
+    
+    def _ensure_batch_processor(self) -> None:
+        """Ensure the batch processor thread is running."""
+        if self.batch_thread is None or not self.batch_thread.is_alive():
+            self.is_batching = True
+            self.batch_thread = threading.Thread(target=self._process_transaction_batch)
+            self.batch_thread.daemon = True
+            self.batch_thread.start()
+            logger.info("Transaction batch processor started")
+    
+    def _process_transaction_batch(self) -> None:
+        """Process transactions in batches."""
+        while self.is_batching:
+            batch = []
+            batch_ids = []
+            
+            # Collect transactions for the batch
+            try:
+                # Get first transaction with timeout
+                tx_id, tx = self.tx_queue.get(timeout=self.batch_timeout)
+                batch.append(tx)
+                batch_ids.append(tx_id)
+                self.tx_queue.task_done()
+                
+                # Get more transactions without blocking
+                while len(batch) < self.batch_size:
+                    try:
+                        tx_id, tx = self.tx_queue.get_nowait()
+                        batch.append(tx)
+                        batch_ids.append(tx_id)
+                        self.tx_queue.task_done()
+                    except queue.Empty:
+                        break
+                        
+            except queue.Empty:
+                # No transactions in queue
+                time.sleep(0.1)
+                continue
+                
+            # Submit batch if we have transactions
+            if batch:
+                try:
+                    response = self.session.post(
+                        f"{self.node_url}/transactions/batch",
+                        headers=self.headers,
+                        json={"transactions": batch},
+                        timeout=20
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+                    
+                    if result.get("success"):
+                        logger.info(f"Batch of {len(batch)} transactions submitted successfully")
+                    else:
+                        logger.warning(f"Batch submission failed: {result.get('message')}")
+                        
+                except Exception as e:
+                    logger.error(f"Failed to submit transaction batch: {e}")
+    
+    def stop_batch_processor(self) -> None:
+        """Stop the batch processor thread."""
+        self.is_batching = False
+        if self.batch_thread and self.batch_thread.is_alive():
+            self.batch_thread.join(timeout=self.batch_timeout + 1)
+            logger.info("Transaction batch processor stopped")
     
     def submit_model_update(self, model_id: str, version: str, 
                            model_path: str, metrics: Dict) -> bool:
@@ -149,11 +279,13 @@ class ONIBlockchainClient:
         }
         
         # Submit transaction with model update
-        return self.submit_transaction(
+        tx_hash = self.submit_transaction(
             recipient="ONI_NETWORK",  # Special recipient for model updates
             amount=0,  # No direct transfer, reward will be calculated by network
             model_update=model_update
         )
+        
+        return bool(tx_hash)
     
     def _hash_model_file(self, model_path: str) -> str:
         """
@@ -205,7 +337,8 @@ class ONIBlockchainClient:
             response = self.session.post(
                 f"{self.node_url}/mine",
                 headers=self.headers,
-                json={"miner": self.public_key} if self.public_key else {}
+                json={"miner": self.public_key} if self.public_key else {},
+                timeout=30  # Longer timeout for mining
             )
             response.raise_for_status()
             result = response.json()
@@ -227,13 +360,24 @@ class ONIBlockchainClient:
         Returns:
             List[Dict]: The blockchain as a list of blocks
         """
+        cache_key = "chain"
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response["chain"]
+            
         try:
             response = self.session.get(
                 f"{self.node_url}/chain",
-                headers=self.headers
+                headers=self.headers,
+                timeout=30  # Longer timeout for full chain
             )
             response.raise_for_status()
-            return response.json()["chain"]
+            result = response.json()
+            
+            # Cache the response
+            self._cache_response(cache_key, result)
+            
+            return result["chain"]
         except Exception as e:
             logger.error(f"Failed to get chain: {e}")
             return []
@@ -248,7 +392,8 @@ class ONIBlockchainClient:
         try:
             response = self.session.get(
                 f"{self.node_url}/transactions/pending",
-                headers=self.headers
+                headers=self.headers,
+                timeout=10
             )
             response.raise_for_status()
             return response.json()["transactions"]
@@ -266,6 +411,11 @@ class ONIBlockchainClient:
         Returns:
             List[Dict]: List of model updates
         """
+        cache_key = f"model_updates_{model_id or 'all'}"
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response["updates"]
+            
         try:
             url = f"{self.node_url}/models/updates"
             if model_id:
@@ -273,10 +423,16 @@ class ONIBlockchainClient:
                 
             response = self.session.get(
                 url,
-                headers=self.headers
+                headers=self.headers,
+                timeout=10
             )
             response.raise_for_status()
-            return response.json()["updates"]
+            result = response.json()
+            
+            # Cache the response
+            self._cache_response(cache_key, result)
+            
+            return result["updates"]
         except Exception as e:
             logger.error(f"Failed to get model updates: {e}")
             return []
@@ -296,7 +452,8 @@ class ONIBlockchainClient:
             response = self.session.get(
                 f"{self.node_url}/models/download/{update_id}",
                 headers=self.headers,
-                stream=True
+                stream=True,
+                timeout=60  # Longer timeout for downloads
             )
             response.raise_for_status()
             
@@ -321,13 +478,24 @@ class ONIBlockchainClient:
         Returns:
             Dict[str, Any]: Blockchain statistics
         """
+        cache_key = "stats"
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response["stats"]
+            
         try:
             response = self.session.get(
                 f"{self.node_url}/stats",
-                headers=self.headers
+                headers=self.headers,
+                timeout=10
             )
             response.raise_for_status()
-            return response.json()["stats"]
+            result = response.json()
+            
+            # Cache the response
+            self._cache_response(cache_key, result)
+            
+            return result["stats"]
         except Exception as e:
             logger.error(f"Failed to get chain stats: {e}")
             return {}
@@ -347,13 +515,88 @@ class ONIBlockchainClient:
             response = self.session.post(
                 f"{self.node_url}/verify",
                 headers=self.headers,
-                json={"block_hash": block_hash, "nonce": nonce}
+                json={"block_hash": block_hash, "nonce": nonce},
+                timeout=10
             )
             response.raise_for_status()
             return response.json()["valid"]
         except Exception as e:
             logger.error(f"Failed to verify proof: {e}")
             return False
+    
+    def get_transaction(self, tx_hash: str) -> Optional[Dict]:
+        """
+        Get a transaction by its hash.
+        
+        Args:
+            tx_hash: Hash of the transaction
+            
+        Returns:
+            Dict: Transaction details, or None if not found
+        """
+        cache_key = f"tx_{tx_hash}"
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response
+            
+        try:
+            response = self.session.get(
+                f"{self.node_url}/transaction/{tx_hash}",
+                headers=self.headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Cache the response
+            self._cache_response(cache_key, result)
+            
+            return result
+        except Exception as e:
+            logger.error(f"Failed to get transaction: {e}")
+            return None
+    
+    def get_gas_price(self) -> float:
+        """
+        Get the current gas price.
+        
+        Returns:
+            float: Current gas price
+        """
+        try:
+            response = self.session.get(
+                f"{self.node_url}/gas-price",
+                headers=self.headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            return response.json()["gas_price"]
+        except Exception as e:
+            logger.error(f"Failed to get gas price: {e}")
+            return 0.00001  # Default gas price
+    
+    def estimate_gas(self, transaction: Dict) -> int:
+        """
+        Estimate gas for a transaction.
+        
+        Args:
+            transaction: Transaction details
+            
+        Returns:
+            int: Estimated gas
+        """
+        try:
+            response = self.session.post(
+                f"{self.node_url}/estimate-gas",
+                headers=self.headers,
+                json=transaction,
+                timeout=10
+            )
+            response.raise_for_status()
+            return response.json()["gas"]
+        except Exception as e:
+            logger.error(f"Failed to estimate gas: {e}")
+            return 100000  # Default gas estimate
 
 
 # Example usage

@@ -4,8 +4,9 @@ import hashlib
 import time
 import logging
 import requests
-from typing import Dict, List, Optional, Any, Tuple
 import threading
+from typing import Dict, List, Optional, Any, Tuple, Union
+import queue
 from pathlib import Path
 
 # Import blockchain client
@@ -46,12 +47,21 @@ class ONIBlockchainIntegration:
         self.contributions_file = Path(self.config.get("contributions_file", "./contributions.json"))
         self.contributions = self._load_contributions()
         
+        # Initialize transaction queue
+        self.tx_queue = queue.Queue()
+        self.tx_processor_thread = None
+        self.is_processing_txs = False
+        
         # Start background sync thread if enabled
         if self.config.get("auto_sync", False):
             self.sync_thread = threading.Thread(target=self._background_sync, daemon=True)
             self.sync_thread.start()
         else:
             self.sync_thread = None
+            
+        # Start transaction processor if enabled
+        if self.config.get("auto_process_tx", True):
+            self.start_tx_processor()
     
     def _load_config(self, config_path: Optional[str]) -> Dict:
         """Load configuration from file or environment variables."""
@@ -64,7 +74,11 @@ class ONIBlockchainIntegration:
             "auto_sync": os.environ.get("ONI_AUTO_SYNC", "false").lower() == "true",
             "sync_interval": int(os.environ.get("ONI_SYNC_INTERVAL", "300")),  # 5 minutes
             "auto_mine": os.environ.get("ONI_AUTO_MINE", "false").lower() == "true",
-            "mine_interval": int(os.environ.get("ONI_MINE_INTERVAL", "600"))  # 10 minutes
+            "mine_interval": int(os.environ.get("ONI_MINE_INTERVAL", "600")),  # 10 minutes
+            "auto_process_tx": os.environ.get("ONI_AUTO_PROCESS_TX", "true").lower() == "true",
+            "batch_transactions": os.environ.get("ONI_BATCH_TRANSACTIONS", "true").lower() == "true",
+            "batch_size": int(os.environ.get("ONI_BATCH_SIZE", "20")),
+            "gas_price": float(os.environ.get("ONI_GAS_PRICE", "0.00001"))
         }
         
         # Override with config file if provided
@@ -121,6 +135,81 @@ class ONIBlockchainIntegration:
                 logger.error(f"Error in background sync: {e}")
                 time.sleep(60)  # Sleep for a minute on error
     
+    def start_tx_processor(self) -> None:
+        """Start the transaction processor thread."""
+        if self.tx_processor_thread is None or not self.tx_processor_thread.is_alive():
+            self.is_processing_txs = True
+            self.tx_processor_thread = threading.Thread(target=self._process_transactions)
+            self.tx_processor_thread.daemon = True
+            self.tx_processor_thread.start()
+            logger.info("Transaction processor started")
+    
+    def stop_tx_processor(self) -> None:
+        """Stop the transaction processor thread."""
+        self.is_processing_txs = False
+        if self.tx_processor_thread and self.tx_processor_thread.is_alive():
+            self.tx_processor_thread.join(timeout=5)
+            logger.info("Transaction processor stopped")
+    
+    def _process_transactions(self) -> None:
+        """Process transactions from the queue."""
+        while self.is_processing_txs:
+            try:
+                # Get transaction from queue with timeout
+                tx_data = self.tx_queue.get(timeout=1)
+                
+                # Submit transaction
+                if self.config.get("batch_transactions", True):
+                    # Use client's batch functionality
+                    tx_hash = self.client.submit_transaction(
+                        recipient=tx_data["recipient"],
+                        amount=tx_data["amount"],
+                        gas_price=tx_data.get("gas_price", self.config.get("gas_price", 0.00001)),
+                        gas_limit=tx_data.get("gas_limit", 100000),
+                        model_update=tx_data.get("model_update"),
+                        data=tx_data.get("data"),
+                        batch=True
+                    )
+                else:
+                    # Submit immediately
+                    tx_hash = self.client.submit_transaction(
+                        recipient=tx_data["recipient"],
+                        amount=tx_data["amount"],
+                        gas_price=tx_data.get("gas_price", self.config.get("gas_price", 0.00001)),
+                        gas_limit=tx_data.get("gas_limit", 100000),
+                        model_update=tx_data.get("model_update"),
+                        data=tx_data.get("data"),
+                        batch=False
+                    )
+                
+                # Record transaction
+                if tx_hash:
+                    logger.info(f"Transaction submitted: {tx_hash}")
+                    
+                    # Update local record if this is a model update
+                    if tx_data.get("model_update"):
+                        model_id = tx_data["model_update"]["model_id"]
+                        version = tx_data["model_update"]["version"]
+                        model_hash = tx_data["model_update"]["data_hash"]
+                        
+                        self.contributions["model_updates"][model_hash] = {
+                            "model_id": model_id,
+                            "version": version,
+                            "tx_hash": tx_hash,
+                            "timestamp": time.time(),
+                            "status": "pending"
+                        }
+                        self._save_contributions()
+                
+                # Mark task as done
+                self.tx_queue.task_done()
+                
+            except queue.Empty:
+                # No transactions in queue
+                pass
+            except Exception as e:
+                logger.error(f"Error processing transaction: {e}")
+    
     def sync_with_blockchain(self) -> bool:
         """
         Synchronize local state with blockchain.
@@ -140,6 +229,13 @@ class ONIBlockchainIntegration:
                 update_id = update.get("update_id")
                 if update_id and update_id not in self.contributions["model_updates"]:
                     self.contributions["model_updates"][update_id] = update
+                elif update_id:
+                    # Update existing record with blockchain data
+                    self.contributions["model_updates"][update_id].update({
+                        "block_index": update.get("block_index"),
+                        "block_hash": update.get("block_hash"),
+                        "status": "confirmed"
+                    })
             
             # Update last sync time
             self.contributions["last_sync"] = time.time()
@@ -152,6 +248,40 @@ class ONIBlockchainIntegration:
         except Exception as e:
             logger.error(f"Failed to sync with blockchain: {e}")
             return False
+    
+    def queue_transaction(self, recipient: str, amount: int, 
+                         gas_price: Optional[float] = None, 
+                         gas_limit: int = 100000,
+                         model_update: Optional[Dict] = None, 
+                         data: Optional[str] = None) -> None:
+        """
+        Queue a transaction for processing.
+        
+        Args:
+            recipient: Address of the recipient
+            amount: Amount to transfer
+            gas_price: Price per unit of gas (optional)
+            gas_limit: Maximum gas allowed for transaction
+            model_update: Optional AI model update data
+            data: Optional transaction data
+        """
+        # Use configured gas price if not provided
+        if gas_price is None:
+            gas_price = self.config.get("gas_price", 0.00001)
+            
+        # Add to transaction queue
+        self.tx_queue.put({
+            "recipient": recipient,
+            "amount": amount,
+            "gas_price": gas_price,
+            "gas_limit": gas_limit,
+            "model_update": model_update,
+            "data": data
+        })
+        
+        # Start transaction processor if not already running
+        if not self.is_processing_txs:
+            self.start_tx_processor()
     
     def submit_model_update(self, model_id: str, version: str, 
                            model_path: str, metrics: Dict) -> bool:
@@ -264,9 +394,8 @@ class ONIBlockchainIntegration:
             self.contributions["training_sessions"][session_id] = session_record
             self._save_contributions()
             
-            # Submit transaction to blockchain
-            # This is a simplified version - in practice, you'd use a specific API
-            success = self.client.submit_transaction(
+            # Queue transaction to blockchain
+            self.queue_transaction(
                 recipient="ONI_NETWORK",
                 amount=0,
                 model_update={
@@ -279,7 +408,7 @@ class ONIBlockchainIntegration:
             )
             
             logger.info(f"Recorded training session {session_id} for {model_id}")
-            return success
+            return True
         except Exception as e:
             logger.error(f"Error recording training session: {e}")
             return False
@@ -387,8 +516,8 @@ class ONIBlockchainIntegration:
             # Save contributions
             self._save_contributions()
             
-            # Submit transaction to blockchain
-            success = self.client.submit_transaction(
+            # Queue transaction to blockchain
+            self.queue_transaction(
                 recipient="ONI_NETWORK",
                 amount=0,
                 model_update={
@@ -402,7 +531,7 @@ class ONIBlockchainIntegration:
             )
             
             logger.info(f"Completed training session {session_id}")
-            return success
+            return True
         except Exception as e:
             logger.error(f"Error completing training session: {e}")
             return False
@@ -447,8 +576,8 @@ class ONIBlockchainIntegration:
             self.contributions["feedback"][feedback_id] = feedback_record
             self._save_contributions()
             
-            # Submit transaction to blockchain
-            success = self.client.submit_transaction(
+            # Queue transaction to blockchain
+            self.queue_transaction(
                 recipient="ONI_NETWORK",
                 amount=0,
                 model_update={
@@ -463,7 +592,7 @@ class ONIBlockchainIntegration:
             )
             
             logger.info(f"Recorded feedback {feedback_id} for session {session_id}")
-            return success
+            return True
         except Exception as e:
             logger.error(f"Error recording feedback: {e}")
             return False
@@ -592,8 +721,8 @@ class ONIBlockchainIntegration:
             "hash": hashlib.sha256(f"{contributor_id}:{contribution_type}:{compute_hours}:{quality_score}:{time.time()}".encode()).hexdigest()
         }
         
-        # Submit to blockchain
-        success = self.client.submit_transaction(
+        # Queue transaction to blockchain
+        self.queue_transaction(
             recipient="ONI_NETWORK",
             amount=0,
             model_update={
@@ -606,12 +735,8 @@ class ONIBlockchainIntegration:
             }
         )
         
-        if success:
-            logger.info(f"Created proof of contribute for {contributor_id}")
-            return proof
-        else:
-            logger.warning(f"Failed to create proof of contribute for {contributor_id}")
-            return {}
+        logger.info(f"Created proof of contribute for {contributor_id}")
+        return proof
     
     def verify_proof_of_contribute(self, proof: Dict) -> bool:
         """
@@ -645,6 +770,12 @@ class ONIBlockchainIntegration:
         """Shutdown the blockchain integration."""
         # Save contributions
         self._save_contributions()
+        
+        # Stop transaction processor
+        self.stop_tx_processor()
+        
+        # Stop batch processor in client
+        self.client.stop_batch_processor()
         
         # Stop background thread if running
         if self.sync_thread and self.sync_thread.is_alive():
