@@ -1,24 +1,56 @@
 Pantheum License
 Copyright (c) 2024 Ahri Steele
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software, subject to the following conditions:
+This license governs the use, reproduction, distribution, and modification of the software and associated documentation files (the "Software").
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+1. DEFINITIONS
+   - "Software" refers to the Oni system and all associated code, documentation, and materials.
+   - "Contributor" refers to any individual or entity that submits code, documentation, or other materials to the Software.
+   - "Educational Use" refers to use for teaching, learning, academic research, and personal study.
+   - "Collaborative Use" refers to non-commercial use by multiple individuals or entities working together to improve the Software.
 
-Redistribution of the Software, in whole or in part, in any form or by any means, is expressly prohibited.
+2. GRANT OF RIGHTS
+   Permission is hereby granted, free of charge, to any person obtaining a copy of the Software, to use the Software solely for Educational Use, Collaborative Use, and contributions to the Software, subject to the following conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   a. The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+   
+   b. Redistribution of the Software, in whole or in part, in any form or by any means, is permitted only for Educational Use and Collaborative Use.
+   
+   c. Commercial use, including but not limited to selling, licensing, or using the Software to provide commercial services, is expressly prohibited without explicit written permission from the copyright holder.
+   
+   d. Any contributions to the Software shall be made under the terms of this license, and contributors grant the copyright holder a perpetual, worldwide, non-exclusive, royalty-free license to use, copy, modify, and distribute their contributions.
 
-Use of the Software is at your own risk. You assume full responsibility for any consequences arising from its use. Any form of malicious use, including but not limited to activities that cause harm, exploit vulnerabilities, or violate laws, is strictly prohibited.
+3. ETHICAL USE REQUIREMENTS
+   Use of the Software is at your own risk. You assume full responsibility for any consequences arising from its use. Any form of malicious use, including but not limited to activities that cause harm, exploit vulnerabilities, or violate laws, is strictly prohibited.
 
-The development and use of this software should adhere to the highest standards of ethical conduct, ensuring it does not cause harm or discriminate against individuals or groups, and respects privacy, promotes fairness, transparency, and accountability.
+   The development and use of this Software must adhere to the highest standards of ethical conduct, ensuring it does not:
+   - Cause harm or discriminate against individuals or groups
+   - Violate privacy
+   - Promote unfairness
+   - Lack transparency or accountability
 
-AI Ethics and Virtue
-The Oni software represents a powerful and potentially dangerous tool. Users must not experiment with or modify the underlying variables of the software without express guidance from the Oni development team. Ethical use of this AI is paramount, including but not limited to:
+4. AI ETHICS AND VIRTUE
+   The Oni software represents a powerful tool. Users must not experiment with or modify the underlying variables of the software without express guidance from the Oni development team. Ethical use of this AI is paramount, including but not limited to:
 
-Non-Harm: Ensuring the software does not cause physical, emotional, or psychological harm to any individual or group.
-Privacy: Respecting the privacy of users and individuals whose data may be processed by the software.
-Fairness: Avoiding biases and ensuring the software operates fairly across all demographics.
-Transparency: Making the processes and decisions made by the software transparent and understandable to users.
-Accountability: Taking responsibility for the outcomes produced by the software and rectifying any negative impacts swiftly and responsibly.
+   - Non-Harm: Ensuring the software does not cause physical, emotional, or psychological harm to any individual or group.
+   - Privacy: Respecting the privacy of users and individuals whose data may be processed by the software.
+   - Fairness: Avoiding biases and ensuring the software operates fairly across all demographics.
+   - Transparency: Making the processes and decisions made by the software transparent and understandable to users.
+   - Accountability: Taking responsibility for the outcomes produced by the software and rectifying any negative impacts swiftly and responsibly.
+
+5. CONTRIBUTIONS AND IMPROVEMENTS
+   All contributions to the Software, including but not limited to code, documentation, and other materials, shall be made under the terms of this license. Contributors retain copyright to their contributions but grant the copyright holder a perpetual, worldwide, non-exclusive, royalty-free license to use, copy, modify, and distribute their contributions.
+
+6. DISCLAIMER OF WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+7. LIMITATION OF LIABILITY
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+8. TERMINATION
+   This license automatically terminates if you violate any of its terms and conditions. Upon termination, you must destroy all copies of the Software in your possession.
+
+9. GOVERNING LAW
+   This license shall be governed by and construed in accordance with the laws of the jurisdiction in which the copyright holder is located, without regard to its conflict of law provisions.
+
 The Oni software should be used in a manner that promotes the well-being and dignity of all individuals. Misuse or unethical application of the software can lead to serious consequences, both legally and morally. Always seek and adhere to the guidance provided by the Oni development team to ensure safe and ethical use.
