@@ -1,0 +1,84 @@
+{
+  "name": "oni-chat-frontend",
+  "version": "1.0.0",
+  "description": "ONI AGI Training Chat Frontend - Earn tokens through AI training contributions",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ethers": "^6.8.1",
+    "wagmi": "^2.5.7",
+    "@wagmi/core": "^2.6.5",
+    "@wagmi/connectors": "^4.1.14",
+    "viem": "^2.7.13",
+    "@tanstack/react-query": "^5.28.4",
+    "@rainbow-me/rainbowkit": "^2.0.5",
+    "zustand": "^4.5.2",
+    "framer-motion": "^11.0.24",
+    "react-hot-toast": "^2.4.1",
+    "lucide-react": "^0.363.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.2",
+    "class-variance-authority": "^0.7.0",
+    "date-fns": "^3.6.0",
+    "recharts": "^2.12.2",
+    "socket.io-client": "^4.7.5",
+    "react-markdown": "^9.0.1",
+    "react-syntax-highlighter": "^15.5.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@types/react-syntax-highlighter": "^15.5.11",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "vitest": "^1.4.0",
+    "@vitest/ui": "^1.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AhriCat/ONI-Public.git",
+    "directory": "frontend"
+  },
+  "keywords": [
+    "oni",
+    "agi",
+    "blockchain",
+    "rlhf",
+    "ai-training",
+    "crypto-rewards",
+    "proof-of-contribute",
+    "react",
+    "typescript",
+    "web3"
+  ],
+  "author": "ONI Team",
+  "license": "Pantheum License",
+  "homepage": "https://github.com/AhriCat/ONI-Public#readme",
+  "bugs": {
+    "url": "https://github.com/AhriCat/ONI-Public/issues"
+  }
+}
