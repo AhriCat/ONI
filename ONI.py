@@ -433,6 +433,20 @@ class OniMicro(nn.Module):
         self.lock = self.safe_init(lambda: threading.Lock(), "threading lock")
         self.toolregistry = AIToolsRegistry()
         self.toolinterface = AIToolsInterface()
+
+        self.toolregistry.__init__
+        self.toolinterface.__init__
+        
+    def add_tool(tool):
+        tool = self.toolregistry.__new__(tool)
+        self.toolregistry.register_tool(tool)
+    def remove_tool(tool):
+        self.toolregistry.unregister_tool(tool)
+        
+    def use_tool(prompt):
+        tasks = self.NLP.identifytasks(prompt)
+        self.toolinterface._process_tasks(tasks)
+        self.toolinterface._execute_tasks(tasks)
         
     def safe_init(self, init_fn, component_name):
         """Safely initialize components to prevent errors."""
