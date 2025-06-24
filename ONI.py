@@ -1415,3 +1415,55 @@ class OniMicro(nn.Module):
             return status
         except Exception as e:
             return {"error": f"Failed to get status: {e}"}
+            
+    def scan_files_for_models(directory: str) -> List[str]:
+        """
+        Scans a directory for model files.
+        """
+        model_paths = []
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith((".pt", ".pth", ".bin")):
+                    model_path = os.path.join(root, file)
+                    model_paths.append(model_path)
+        return model_paths
+    
+    def subsume(self, model_file, module_name):
+        model_directory = "/PATH" # Update this with your local path
+        model_files = self.scan_files_for_models(model_directory)
+
+
+        for model_file in model_files:
+           #  Get the model name without the extension
+            module_name = os.path.splitext(os.path.basename(model_file))[0]
+
+           # Load models
+            module = self.injector.inject_module(model_file, module_name, source="file")
+            if module:
+              # Example usage
+                input_data = {'input_ids': torch.randint(0, 100, (1, 10)).to(self.injector.device)}
+                output = self.injector.forward(module_name, input_data)
+                if output is not None:
+                  print(f"Successfully injected {module_name}")
+                  if isinstance(output, torch.Tensor):
+                      print(output.shape)
+                  else:
+                     print(output)
+
+        # Inject a model from huggingface
+ 
+        module = self.injector.inject_module(model_name, module_name)
+        if module:
+              # Example usage
+             if hasattr(module, 'tokenizer'):
+                  encoding = module.tokenizer("Hello world", return_tensors='pt')
+                  input_data = encoding
+             else:
+                   input_data = {'input_ids': torch.randint(0, 100, (1, 10)).to(injector.device)}
+             output = self.injector.forward(module_name, input_data)
+             if output is not None:
+                  print(f"Successfully injected {module_name}")
+                  if isinstance(output, torch.Tensor):
+                      print(output.shape)
+                  else:
+                     print(output)
