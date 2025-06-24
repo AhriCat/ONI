@@ -14,12 +14,6 @@ import threading
 import time
 import pygame  # For rendering
 import math
-
-
-
-
-
-
 # ===========================
 # Memory Manager
 # ===========================
