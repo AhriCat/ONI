@@ -11,7 +11,7 @@ from tools.unity_controller import UnityController
 from tools.blender_controller import BlenderController
 from tools.after_effects_controller import AfterEffectsController
 from tools.photoshop_controller import PhotoshopController
-
+from tools.integrationmanager import EnhnacedToolIntegration
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -26,7 +26,8 @@ class AICreativeTools:
         self.blender = None
         self.after_effects = None
         self.photoshop = None
-        
+        self.integrations - EnhancedToolIntegration
+        self.integrations.__init__
         # Track initialized tools
         self.initialized_tools = set()
         
