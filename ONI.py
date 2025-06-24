@@ -283,7 +283,8 @@ except ImportError:
         def decode(self, ids):
             return "decoded text"
     tokenizer = MultitokenBPETokenizer()
-
+from tools.ai_tools_registry import AIToolsRegistry
+from tools.ai_tools_interface import AIToolsInterface
 # Fallback implementations for missing components
 from modules.skills.dynamic_module_injector import DynamicModuleInjector
 
@@ -332,7 +333,7 @@ class RecurrentQNetwork(nn.Module):
         lstm_out, hidden = self.lstm(state, hidden)  # lstm_out: (batch_size, seq_len, hidden_dim)
         q_values = self.fc(lstm_out[:, -1, :])  # Take the output of the last time step
         return q_values, hidden
-
+f
 class OniMicro(nn.Module):
     def __init__(self, tokenizer, input_dim, hidden_dim, output_dim, nhead, num_layers, exec_func, state_size, action_size, learning_rate=0.002, discount_factor=0.98, exploration_rate=1.0, exploration_decay=0.995, target_update=10, device=device):
         super(OniMicro, self).__init__()
@@ -430,7 +431,9 @@ class OniMicro(nn.Module):
 
         # Lock for thread safety
         self.lock = self.safe_init(lambda: threading.Lock(), "threading lock")
-
+        self.toolregistry = AIToolsRegistry()
+        self.toolinterface = AIToolsInterface()
+        
     def safe_init(self, init_fn, component_name):
         """Safely initialize components to prevent errors."""
         try:
