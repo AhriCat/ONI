@@ -250,7 +250,10 @@ npx hardhat run scripts/deploy.js --network oni
 
 ### **Project Structure**
 ```
-oni/
+Oni-Public/
+├── all-in-one-versions/
+├── constants/
+├── frontend/ 
 ├── modules/           # Core AI modules
 ├── chain/             # Blockchain components
 ├── rlhf/              # Reinforcement learning with human feedback
@@ -260,6 +263,7 @@ oni/
 ├── tests/             # Unit and integration tests
 ├── scripts/           # Utility scripts
 ├── contracts/         # Smart contracts
+├── Oni.py
 └── usage/             # Example implementations
 ```
 
