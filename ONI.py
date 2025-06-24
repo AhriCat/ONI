@@ -32,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Import modules with error handling
 try:
-    from modules import file_preprocessor
+    from tools import file_preprocessor
 except ImportError:
     logger.warning("file_preprocessor not found, using fallback")
     class file_preprocessor:
@@ -41,7 +41,7 @@ except ImportError:
             return ""
 
 try:
-    from modules import oni_vision as vision
+    from modules.vision import oni_vision as vision
 except ImportError:
     logger.warning("oni_vision not found, using fallback")
     class vision:
@@ -50,7 +50,7 @@ except ImportError:
             return torch.zeros(1, 896), 0.0
 
 try:
-    from modules import oni_audio as audio
+    from modules.audio import oni_audio as audio
 except ImportError:
     logger.warning("oni_audio not found, using fallback")
     class audio:
@@ -59,7 +59,7 @@ except ImportError:
             return torch.zeros(1, 896), 0.0
 
 try:
-    from modules import oni_MM_attention as MultiModalAttention
+    from modules.attention import multi_modal_attention as MultiModalAttention
 except ImportError:
     logger.warning("oni_MM_attention not found, using fallback")
     class MultiModalAttention:
@@ -69,7 +69,7 @@ except ImportError:
             return x1
 
 try:
-    from modules import oni_memory as memory 
+    from modules.memory import oni_memory as memory 
 except ImportError:
     logger.warning("oni_memory not found, using fallback")
     class memory:
@@ -78,7 +78,7 @@ except ImportError:
             pass
 
 try:
-    from modules import oni_netmonitor as netmon
+    from modules.skills import oni_netmonitor as netmon
 except ImportError:
     logger.warning("oni_netmonitor not found, using fallback")
     class netmon:
@@ -87,7 +87,7 @@ except ImportError:
             pass
 
 try:
-    from modules import oni_portscanner as ps
+    from modules.skills import oni_portscanner as ps
 except ImportError:
     logger.warning("oni_portscanner not found, using fallback")
     class ps:
@@ -105,7 +105,7 @@ except ImportError:
             pass
 
 try:
-    from modules import oni_metacognition as MetaCognition
+    from modules.NLP import oni_metacognition as MetaCognition
     from modules.oni_metacognition import MetaCognitionModule
 except ImportError:
     logger.warning("oni_metacognition not found, using fallback")
@@ -127,7 +127,7 @@ except ImportError:
             return x, 0.0
 
 try:
-    from modules.oni_NLP import OptimizedNLPModule as nlp_module
+    from modules.NLP.oni_NLP import OptimizedNLPModule as nlp_module
 except ImportError:
     logger.warning("oni_NLP not found, using fallback")
     class nlp_module:
@@ -264,7 +264,7 @@ except ImportError:
 
 # Import trading module with error handling
 try:
-    from modules.oni_crypto_trade import TradingBot
+    from modules.skills.oni_crypto_trade import TradingBot
     trader = TradingBot
 except ImportError:
     logger.warning("Trading module not found, using fallback")
@@ -275,7 +275,7 @@ except ImportError:
 
 # Import tokenizer with error handling
 try:
-    from modules.oni_Tokenizer import MultitokenBPETokenizer
+    from modules.NLP.Tokenizer import MultitokenBPETokenizer
     tokenizer = MultitokenBPETokenizer()
 except ImportError:
     logger.warning("Tokenizer not found, using fallback")
@@ -287,18 +287,10 @@ except ImportError:
     tokenizer = MultitokenBPETokenizer()
 
 # Fallback implementations for missing components
-class DynamicModuleInjector:
-    def inject_module(self, *args, **kwargs):
-        return None
-    def forward(self, *args, **kwargs):
-        return None
+from modules.skills.dynamic_module_injector import DynamicModuleInjector
 
-class DynamicSynapse(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.linear = nn.Linear(input_dim, output_dim)
-    def forward(self, x):
-        return self.linear(x)
+from modules.dynamics.oni_dyn import DynamicSynapse
+from modules.dynamics.onidynlayer import DynamicLayer
 
 class EnergyBasedSynapse(nn.Module):
     def __init__(self, input_dim, output_dim):
