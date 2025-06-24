@@ -105,7 +105,6 @@ except ImportError:
             pass
 
 try:
-    from modules.NLP import oni_metacognition as MetaCognition
     from modules.oni_metacognition import MetaCognitionModule
 except ImportError:
     logger.warning("oni_metacognition not found, using fallback")
@@ -116,7 +115,6 @@ except ImportError:
             return x, 0.5, []
 
 try:
-    from modules import oni_homeostasis as HomeostaticController
     from modules.oni_homeostasis import HomeostaticController
 except ImportError:
     logger.warning("oni_homeostasis not found, using fallback")
@@ -292,12 +290,7 @@ from modules.skills.dynamic_module_injector import DynamicModuleInjector
 from modules.dynamics.oni_dyn import DynamicSynapse
 from modules.dynamics.onidynlayer import DynamicLayer
 
-class EnergyBasedSynapse(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.linear = nn.Linear(input_dim, output_dim)
-    def forward(self, x):
-        return self.linear(x), 0.0
+from modules.dynamics.energy_based_synapse import EnergyBasedSynapse
 
 class SparseFocusedGroupAttention(nn.Module):
     def __init__(self, hidden_dim):
