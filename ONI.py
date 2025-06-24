@@ -292,13 +292,7 @@ from modules.dynamics.onidynlayer import DynamicLayer
 
 from modules.dynamics.energy_based_synapse import EnergyBasedSynapse
 
-class SparseFocusedGroupAttention(nn.Module):
-    def __init__(self, hidden_dim):
-        super().__init__()
-        self.attention = nn.MultiheadAttention(hidden_dim, 8, batch_first=True)
-    def forward(self, x, hidden=None):
-        out, _ = self.attention(x, x, x)
-        return out, hidden
+from modules.attention.efficient_attention import EfficientAttention 
 
 class RBM:
     def __init__(self, num_visible, num_hidden):
@@ -352,7 +346,7 @@ class OniMicro(nn.Module):
         self.embedding = nlp_module.embedding if hasattr(nlp_module, 'embedding') else nn.Embedding(1000, 896)
         
         # Initialize advanced modules
-        self.attention = SparseFocusedGroupAttention(hidden_dim)
+        self.attention = EfficientAttention(hidden_dim)
         self.memory = memory 
         self.hm = self.share_memory if hasattr(self, 'share_memory') else lambda: None
         self.memnet = lambda: None  # finder.use_hopfield_network
