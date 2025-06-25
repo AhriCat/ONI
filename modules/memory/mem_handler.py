@@ -1,3 +1,4 @@
+from memory.volatile_memory import VolatileMemory
 class MemoryInterferenceHandler:
     """
     Handles interference between conflicting memories.
@@ -5,7 +6,17 @@ class MemoryInterferenceHandler:
     """
     def __init__(self, confidence_threshold: float = 0.7):
         self.confidence_threshold = confidence_threshold
+        self.cache = VolatileMemory()
         self.contradiction_log = []
+    
+    def get_context(self, query):
+        cached = self.cache.get(query)
+        if cached is not None:
+            return cached
+
+        result = self.semantic.retrieve(query)
+        self.cache.set(query, result)
+        return result  
         
     def check_contradiction(self, memory1: Dict[str, Any], 
                            memory2: Dict[str, Any]) -> Tuple[bool, float]:
