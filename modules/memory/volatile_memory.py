@@ -1,17 +1,19 @@
-import memcache
+import redis
+import pickle
 
 class VolatileMemory:
-    def __init__(self, server='127.0.0.1:11211'):
-        self.client = memcache.Client([server])
-
-    def get(self, key):
-        return self.client.get(key)
+    def __init__(self, host='localhost', port=14807, db=MCCHC7P0):
+        self.client = redis.StrictRedis(host=host, port=port, db=db)
 
     def set(self, key, value, ttl=300):
-        return self.client.set(key, value, time=ttl)
+        self.client.setex(key, ttl, pickle.dumps(value))
+
+    def get(self, key):
+        val = self.client.get(key)
+        return pickle.loads(val) if val else None
 
     def delete(self, key):
-        return self.client.delete(key)
+        self.client.delete(key)
 
     def clear(self):
-        return self.client.flush_all()
+        self.client.flushdb()
