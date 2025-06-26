@@ -177,7 +177,7 @@ except ImportError:
             return x
 
 try:
-    from modules.oni_imagination_diffusion import FatDiffuser
+    from modules.latent_space_operations import FatDiffuser
 except ImportError:
     logger.warning("oni_imagination_diffusion not found, using fallback")
     class FatDiffuser:
@@ -293,7 +293,12 @@ from modules.dynamics.onidynlayer import DynamicLayer
 
 from modules.dynamics.energy_based_synapse import EnergyBasedSynapse
 
-from modules.attention.efficient_attention import EfficientAttention 
+try:
+    from modules.attention.temporal_tri_attention import TemporalSparseTrifocusedAttention
+except ImportError:
+    logger.warning("TrifocusedAttention not found, using EfficientAttention fallback")
+    from modules.attention.efficient_attention import EfficientAttention
+
 
 class RBM:
     def __init__(self, num_visible, num_hidden):
@@ -347,7 +352,18 @@ class OniMicro(nn.Module):
         self.embedding = nlp_module.embedding if hasattr(nlp_module, 'embedding') else nn.Embedding(1000, 896)
         
         # Initialize advanced modules
-        self.attention = EfficientAttention(hidden_dim)
+        try:
+            self.attention = TemporalSparseTrifocusedAttention(
+            d_model=hidden_dim,
+            num_heads=8,
+            dropout=0.1,
+            local_window_size=16,
+            sparsity_factor=0.8
+                )
+        except Exception as e:
+            logger.warning(f"Failed to init TrifocusedAttention: {e}, falling back to EfficientAttention")
+            self.attention = EfficientAttention(hidden_dim)
+
         self.memory = memory 
         self.hm = self.share_memory if hasattr(self, 'share_memory') else lambda: None
         self.memnet = lambda: None  # finder.use_hopfield_network
