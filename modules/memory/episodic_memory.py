@@ -1,3 +1,5 @@
+from modules.attention.concept_similarity_attention import ConceptSimilarityMemoryAttention
+
 class EpisodicEmbeddingLayer(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, compression_rate: float = 0.9):
         super(EpisodicEmbeddingLayer, self).__init__()
@@ -61,7 +63,7 @@ class EpisodicBuffer(nn.Module):
         self.time_step = 0
         
         # Attention mechanism for buffer access
-        self.attention = nn.MultiheadAttention(hidden_dim, num_heads=4, batch_first=True)
+        self.attention = ConceptSimilarityMemoryAttention(hidden_dim, memory_slots=buffer_size)
         
         # Gating mechanism for writing to buffer
         self.write_gate = nn.Sequential(
