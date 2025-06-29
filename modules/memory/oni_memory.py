@@ -45,7 +45,7 @@ class Memory:
         self.episodic_embeddings = {}  # To store episodic embeddings
         self.semantic_embeddings = {}  # To store semantic embeddings
         self.episodic_layer = EpisodicEmbeddingLayer(input_dim=8192, output_dim=8192)
-        self.semantic_layer = SemanticMemoryLayer(input_dim=1024, output_dim=1024)
+        self.semantic_layer = SemanticMemoryLayer(input_dim=8192, output_dim=8192)
         self.episodic_layer.to(device)  # Adjust device as needed
         self.semantic_layer.to(device)  # Adjust device as needed
         
