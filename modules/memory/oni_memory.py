@@ -14,6 +14,16 @@ import threading
 import time
 import pygame  # For rendering
 import math
+from memory.episodic_memory import EpisodicBuffer, EpisodicEmbeddingLayer
+from memory.fading_memory import FadingMemorySystem
+from memory.heuristic_manager import HeuristicManager
+from memory.hopfield import SparceHopfieldNetwork, ModernContinuousHopfieldNetwork
+from memory.mem_handler import MemoryInterferenceHandler
+from memory.memory_consolidator import MemoryCosolidator
+from memory.semantic_memory import SemanticMemoryLayer, TextPatternFinder
+from memory.snapshot_memory import SnapshotMemorySystem
+from memory.spatial_memory import SpatialMemoryModule
+from memory.volatile_memory import VolatileMemory
 # ===========================
 # Memory Manager
 # ===========================
@@ -49,7 +59,8 @@ class Memory:
         self.is_sleeping = False
         self.last_sleep_time = time.time()
         self.sleep_interval = 3600  # Default: consolidate every hour
-   
+        self.fading = FadingMemorySystem()
+        self.snapshot = SnapshotMemory()
     def cleanup(self):
         """Release any held resources."""
         self.memory.data.zero_()
