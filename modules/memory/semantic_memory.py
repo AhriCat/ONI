@@ -18,7 +18,7 @@ class HyperEdge:
 
 class SemanticMemoryLayer(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, max_hyperedges: int = 10000):
-        super(HypergraphicSemanticMemoryLayer, self).__init__()
+        super(SemanticMemoryLayer, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.max_hyperedges = max_hyperedges
