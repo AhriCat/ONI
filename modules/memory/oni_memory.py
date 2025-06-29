@@ -51,7 +51,7 @@ class Memory:
         
         # New memory components
         self.episodic_buffer = EpisodicBuffer(hidden_dim=896, buffer_size=working_memory_capacity)
-        self.continuous_hopfield = ModernContinuousHopfieldNetwork(hidden_dim=896)
+        self.continuous_hopfield = ModernContinuousHopfieldNetwork(hidden_dim=8192)
         self.memory_consolidator = MemoryConsolidator()
         self.interference_handler = MemoryInterferenceHandler()
         
