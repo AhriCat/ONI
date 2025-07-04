@@ -1,0 +1,123 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Dict, Tuple
+
+# Assume ONI core systems feed into this controller externally
+# These include oni.vision, oni.audio, and oni.haptics interfaces
+
+from modules.oni_executive_function import ExecutiveDecisionNet
+
+class ParietalCortexEmulator(nn.Module):
+    """
+    Integrates spatial, sensory, and motor information akin to the parietal lobe.
+    Acts as a sensorimotor association area for body schema modeling.
+    """
+    def __init__(self, tactile_dim: int, vision_dim: int, audio_dim: int, intent_dim: int, output_dim: int):
+        super().__init__()
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(tactile_dim + vision_dim + audio_dim + intent_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, output_dim),
+            nn.Tanh()
+        )
+
+    def forward(self, tactile: torch.Tensor, vision: torch.Tensor, audio: torch.Tensor, intent: torch.Tensor) -> torch.Tensor:
+        combined = torch.cat([tactile, vision, audio, intent], dim=-1)
+        return self.fusion_layer(combined)
+
+
+class RoboticsController(nn.Module):
+    """
+    Robotics controller integrating executive function and parietal sensorimotor association.
+    Compatible with ONI's core vision/audio/haptics systems and capable of routing final control to hardware pins.
+    """
+    def __init__(self, device='cpu'):
+        super().__init__()
+        self.device = device
+
+        # Executive function pre-trained by ONI core (handles multimodal interpretation)
+        self.executive_function = ExecutiveDecisionNet(input_channels=3, output_dim=512).to(device)
+
+        # Parietal association system: fused sensorimotor representation
+        self.parietal_module = ParietalCortexEmulator(
+            tactile_dim=64, vision_dim=512, audio_dim=64, intent_dim=64, output_dim=128
+        )
+
+        # Final control signal to actuators or GPIO
+        self.motor_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 8)  # example 8-DOF or 8-pin GPIO
+        )
+
+    def forward(self,
+                oni_vision_features: torch.Tensor,
+                oni_audio_features: torch.Tensor,
+                oni_tactile_features: torch.Tensor,
+                intent_vector: torch.Tensor) -> Dict:
+        """
+        Expects pre-processed embeddings from ONI's perception pipeline:
+        - oni_vision_features: Tensor from oni.vision (shape: [B, 512])
+        - oni_audio_features: Tensor from oni.audio (shape: [B, 64])
+        - oni_tactile_features: Tensor from oni.haptics (shape: [B, 64])
+        - intent_vector: Tensor from cognitive/planning network (shape: [B, 64])
+        """
+        # Fuse sensorimotor context
+        parietal_out = self.parietal_module(
+            tactile=oni_tactile_features,
+            vision=oni_vision_features,
+            audio=oni_audio_features,
+            intent=intent_vector
+        )
+
+        # Final motor action
+        motor_command = self.motor_head(parietal_out)
+
+        return {
+            'parietal_output': parietal_out,
+            'motor_command': motor_command
+        }
+
+
+# External controller hook (called from ONI)
+def issue_motor_command_to_gpio(motor_command: torch.Tensor):
+    import RPi.GPIO as GPIO
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    motor_command = motor_command.squeeze().detach().cpu().numpy()
+    for pin, val in enumerate(motor_command):
+        GPIO.setup(pin, GPIO.OUT)
+        GPIO.output(pin, GPIO.HIGH if val > 0 else GPIO.LOW)
+
+
+# Example runtime loop for embedded ONI system
+def oni_controller_runtime_loop(controller: RoboticsController, oni):
+    """
+    Live execution loop called from ONI-core. Runs on Raspberry Pi.
+    Continuously fetches perception inputs, computes control signals, and applies them.
+    """
+    import time
+    try:
+        while True:
+            oni_vision = oni.vision.get_features()    # Tensor [B, 512]
+            oni_audio = oni.audio.get_features()      # Tensor [B, 64]
+            oni_tactile = oni.haptics.get_features()  # Tensor [B, 64]
+            oni_intent = oni.mind.get_intent_vector() # Tensor [B, 64]
+
+            output = controller(
+                oni_vision_features=oni_vision,
+                oni_audio_features=oni_audio,
+                oni_tactile_features=oni_tactile,
+                intent_vector=oni_intent
+            )
+
+            issue_motor_command_to_gpio(output['motor_command'])
+            time.sleep(0.05)  # 20 Hz control loop
+
+    except KeyboardInterrupt:
+        print("ONI RoboticsController shutdown.")
+        GPIO.cleanup()
