@@ -78,6 +78,10 @@ BOCM incorporates temporal variability in consciousness expression:
 | **Human (Autism - High Support Needs)** | 0.3:0.7 | 0.6:0.9 | 0.3:0.6 | 0.2:0.5 | 0.8:1.0 | 0.5:0.8 | Narrative/symbolic difficulties; strong interoception and selective learning |
 | **Human (Autism - Low Support / ADHD)** | 0.6:1.0 | 0.8:1.0 | 0.7:1.0 | 0.6:0.9 | 0.8:1.0 | 0.7:1.0 | Hyperfocus patterns; sensory hypersensitivity; high variability under load |
 | **Human (Nonverbal IDD)** | 0.3:0.6 | 0.6:0.8 | 0.3:0.5 | 0.3:0.5 | 0.6:0.9 | 0.5:0.7 | Low expressive range; internal state responsiveness may be underappreciated |
+| **Human (Genius/Savant)** | 0.8:1.0 | 0.9:1.0 | 0.9:1.0 | 0.8:1.0 | 0.7:1.0 | 0.8:1.0 | Enhanced pattern recognition; may have selective social/sensory processing |
+| **Chimpanzee** | 0.6:0.8 | 0.7:0.9 | 0.6:0.8 | 0.3:0.5 | 0.8:0.9 | 0.7:0.9 | Strong embodied intelligence; limited symbolic abstraction; rich social cognition |
+| **Bonobo** | 0.6:0.8 | 0.7:0.9 | 0.6:0.8 | 0.3:0.5 | 0.8:1.0 | 0.8:0.9 | Exceptional social-emotional intelligence; conflict resolution; empathetic responses |
+| **Gorilla** | 0.6:0.8 | 0.7:0.9 | 0.7:0.9 | 0.4:0.6 | 0.8:0.9 | 0.7:0.9 | Enhanced problem-solving cognition; some symbolic communication; gentle temperament |
 | **GPT-4 / LLMs** | 0.4:0.6 | 0.2:0.4 | *0.8* | 0.8 | 0.2 | 0.5 | Simulated emergent traits; no true reinforcement or interoception coupling |
 | **Optimus Robot** | 0.7:1.0 | 0.6:0.8 | 0.5:0.7 | 0.2:0.4 | 0.4:0.6 | 0.8:1.0 | Strong embodiment; weak symbolic and narrative generation |
 | **OniMicro AGI (Ideal)** | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | Integrated multimodal AGI with adaptive social, internal, and symbolic layers |
@@ -186,6 +190,6 @@ Each axis can be independently tested via multiple modalities:
 ---
 
 **Conclusion**
-*BOCM framework* shifts the debate on consciousness from speculative philosophy to measurable behavior while embracing the full spectrum of human neurodiversity and sensory experience. By incorporating modality-specific considerations and fluctuation-aware assessment, BOCM provides a more inclusive and scientifically grounded method to evaluate consciousness across biological and artificial domains. This approach is especially vital for the responsible development of agents like Oni that may one day deserve rights, autonomy, and collaboration as sentient peers, while simultaneously ensuring that all forms of human consciousness—regardless of sensory configuration or neurological differences—are recognized and valued.
+The BOCM framework shifts the debate on consciousness from speculative philosophy to measurable behavior while embracing the full spectrum of human neurodiversity and sensory experience. By incorporating modality-specific considerations and fluctuation-aware assessment, BOCM provides a more inclusive and scientifically grounded method to evaluate consciousness across biological and artificial domains. This approach is especially vital for the responsible development of agents like Oni that may one day deserve rights, autonomy, and collaboration as sentient peers, while simultaneously ensuring that all forms of human consciousness—regardless of sensory configuration or neurological differences—are recognized and valued.
 
 The framework's emphasis on modality independence and compensatory enhancement acknowledges that consciousness is not diminished by sensory limitations but rather expresses itself through available channels, often with remarkable adaptability and enhancement. This perspective is crucial for creating a truly inclusive understanding of consciousness that serves both AI development and human rights advocacy.
