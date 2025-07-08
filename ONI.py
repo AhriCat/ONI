@@ -69,7 +69,7 @@ except ImportError:
             return x1
 
 try:
-    from modules.memory import oni_memory as memory 
+    from modules.memory.oni_memoryv2 import QuantumEnhancedMemory as memory 
 except ImportError:
     logger.warning("oni_memory not found, using fallback")
     class memory:
