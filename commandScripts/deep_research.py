@@ -30,6 +30,7 @@ def research_and_summarize(oni: OniMicro, query: str, depth: int = 3) -> str:
     oni.close_browser()
     return big_summary
 
+###if not wanting to use a fresh "blank slate" import weights or memory into the script using the other functionalities. 
 oni = OniMicro(
     tokenizer=tokenizer,
     input_dim=896,
