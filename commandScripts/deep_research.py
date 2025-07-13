@@ -29,3 +29,17 @@ def research_and_summarize(oni: OniMicro, query: str, depth: int = 3) -> str:
 
     oni.close_browser()
     return big_summary
+
+oni = OniMicro(
+    tokenizer=tokenizer,
+    input_dim=896,
+    hidden_dim=896,
+    output_dim=896,
+    nhead=8,
+    num_layers=20,
+    exec_func=exec_func,
+    state_size=256,
+    action_size=20,
+)
+
+print(research_and_summarize(oni, "emergent AGI regulatory frameworks"))
