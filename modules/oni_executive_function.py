@@ -77,10 +77,10 @@ class TimeAwareExecutiveNet(nn.Module):
 # Example usage
 input_channels = 3
 output_dim = 896
-model = TimeAwareExecutiveNet(input_channels, output_dim)
+exec_func = TimeAwareExecutiveNet(input_channels, output_dim)
 
 # Dummy inputs
 x = torch.randn(4, 3, 224, 224)
 time_remaining = torch.tensor([0.5, 1.0, 1.5, 2.0])  # normalized remaining time (in seconds)
-out = model(x, time_remaining)
+out = exec_func(x, time_remaining)
 print(out.shape)  # Expected: (4, 896)
