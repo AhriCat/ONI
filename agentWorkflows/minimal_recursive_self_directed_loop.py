@@ -20,4 +20,8 @@ while oni.awake():  # persistent loop: could be tied to energy, task queue, etc.
     oni.explore(goals)
 
     # Optional: prune or decay old goals
-    goals = oni.executive_function.filter(goals)  # e.g., based on relevance, energy, novelty
+    goals = oni.exec_func(goals)
+  # e.g., based on relevance, energy, novelty
+   # oni.robotics_controller(goals)
+   # oni.explore(goals)
+   # oni.generate_response(goals)
