@@ -1,116 +1,25 @@
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.utils.data import Dataset, DataLoader
+from torch.optim import AdamW
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.multiprocessing as mp
+import torch.distributed as dist
+from typing import List, Tuple, Dict, Optional
+import numpy as np
+from collections import defaultdict
+import math
 
-words = vocab
-nodes = words
+# Sample vocabulary and corpus
+vocab = ["<PAD>", "<UNK>", "<SOS>", "<EOS>", "the", "a", "an", "is", "are", "was", "were",
+         "hello", "world", "this", "that", "simple", "example", "creating", "hypergraph",
+         "based", "model", "can", "represent", "complex", "relationships", "node", "connect",
+         "multiple", "nodes", "powerful", "tools", "nlp", "capture", "intricate", "dependencies"]
 
-# Create the word_to_index dictionary
-word_to_index = {word: i for i, word in enumerate(words)}
-
-# Create the hyperedges
-hyperedges = [(nodes[i], nodes[i + 1]) for i in range(len(nodes) - 1)]
-
-
-class Hypergraph:
-    def __init__(self, nodes, hyperedges):
-        self.nodes = nodes
-        self.hyperedges = hyperedges
-        self.addnodes = self.nodes.extend(nodes)
-        self.addedges = self.hyperedges.extend(hyperedges)
-        self.num_nodes = len(nodes)
-        self.num_hyperedges = len(hyperedges)
-        self.num_edges = self.num_nodes * (self.num_nodes - 1) // 2
-        self.num_vertices = self.num_nodes + self.num_hyperedges
-        self.node_features = Hypergraph.create_node_features(nodes)
-
-
-
-    def __len__(self):
-        return self.num_nodes + self.num_hyperedges
-
-    def __getitem__(self, idx):
-        if idx < self.num_nodes:
-            return self.nodes[idx]
-        else:
-            return self.hyperedges[idx - self.num_nodes]
-
-    @staticmethod
-    def create_node_features(nodes):
-        node_features = torch.zeros(len(nodes))
-        for i, node in enumerate(nodes):
-            node_features[i] = word_to_index[node]
-            if node not in word_to_index:
-              node_features[i] = len(word_to_index)
-        return node_features
-
-    def set_adjacency_matrix(self, adjacency_matrix):
-        self.adjacency_matrix = adjacency_matrix
-        self.num_edges = adjacency_matrix.sum()
-        self.num_vertices = self.num_nodes + self.num_hyperedges
-        self.node_features = Hypergraph.create_node_features(self.nodes)
-        self.adjacency_matrix = adjacency_matrix
-
-class HypergraphDataset:
-    def __init__(self, texts):
-        self.texts = texts
-        self.hypergraphs = self.create_hypergraphs(texts)
-        hypergraph = self.text_to_hypergraph(texts[0])
-        self.node_features = hypergraph.node_features
-        self.adjacency_matrix = hypergraph.set_adjacency_matrix
-
-    def __getitem__(self, idx):
-        return self.hypergraphs[idx]
-
-    def __len__(self):
-        return len(self.texts)
-
-    def text_to_hypergraph(self, text):
-            # Build the word_to_index dictionary dynamically
-            words = text.split()
-            sentences = text.split('.')
-            word_to_index = {word: i for i, word in enumerate(set(words))}
-
-            # Convert words to indices
-            node_features = [word_to_index[word] for word in words]
-
-            # Create the adjacency matrix
-            num_nodes = len(words)
-            adjacency_matrix = torch.zeros((num_nodes, num_nodes))
-            for i in range(num_nodes):
-                for j in range(i+1, num_nodes):
-                    adjacency_matrix[i, j] = adjacency_matrix[j, i] = 1
-# Create the hypergraph
-            hypergraph = Hypergraph(nodes, [(words[i], words[j]) for i in range(num_nodes) for j in range(i+1, num_nodes)])
-
-            # Set the node features
-            hypergraph.node_features = torch.tensor(node_features)
-
-            return hypergraph
-
-    def create_hypergraphs(self, texts):
-        hypergraphs = []
-        for text in texts:
-            nodes = text.split()
-            hyperedges = self.create_hyperedges(nodes)
-            hypergraphs.append(Hypergraph(nodes, hyperedges))
-        return hypergraphs
-
-    def create_hyperedges(self, nodes):
-        hyperedges = []
-        for i in range(len(nodes) - 1):
-            hyperedges.append((nodes[i], nodes[i + 1]))
-        return hyperedges
-    def get_relationships(self):
-        relationships = []
-        for hypergraph in self.hypergraphs:
-            for node in hypergraph.nodes:
-                for hyperedge in hypergraph.hyperedges:
-                    relationships.append((node, hyperedge[0], hyperedge[1]))
-            return relationships
-
-
-texts = [
+corpus = [
     "This is a simple example.",
     "Creating a hypergraph-based model.",
     "Hypergraphs can represent complex relationships.",
@@ -120,444 +29,487 @@ texts = [
     "A hypergraph structure is more flexible than a simple graph.",
     "In NLP, hypergraphs can enhance the representation of text.",
     "They can improve the performance of language models.",
-    "Advanced hypergraph models can capture higher-order relationships.",
-    "Natural language processing benefits from complex models.",
-    "Graph structures are essential for many machine learning tasks.",
-    "Text data can be represented as graphs or hypergraphs.",
-    "Hypergraphs offer a more expressive representation for text.",
-    "Understanding hypergraphs is key to leveraging their power.",
-    "Complex models can better capture the nuances of language.",
-    "Language models require robust and flexible architectures.",
-    "Hypergraph-based models can handle complex data scenarios.",
-
+    "Advanced hypergraph models can capture higher-order relationships."
 ]
 
+class Hypergraph:
+    """Modern hypergraph representation with proper indexing and features."""
 
+    def __init__(self, nodes: List[str], hyperedges: List[Tuple[str, ...]], word_to_index: Dict[str, int]):
+        self.nodes = nodes
+        self.hyperedges = hyperedges
+        self.word_to_index = word_to_index
+        self.num_nodes = len(nodes)
+        self.num_hyperedges = len(hyperedges)
 
+        # Create incidence matrix (nodes x hyperedges)
+        self.incidence_matrix = self._create_incidence_matrix()
+        self.node_features = self._create_node_features()
 
-    # Add more texts as needed
-dataset = HypergraphDataset(corpus + vocab)
-hypergraphs = dataset.hypergraphs
-hyper_vocab = []
+    def _create_incidence_matrix(self) -> torch.Tensor:
+        """Create incidence matrix H where H[i,j] = 1 if node i is in hyperedge j."""
+        matrix = torch.zeros(self.num_nodes, self.num_hyperedges)
+        node_to_idx = {node: i for i, node in enumerate(self.nodes)}
 
-for hypergraph in hypergraphs:
-    print("Number of nodes:", hypergraph.num_nodes)
-    print("Number of hyperedges:", hypergraph.num_hyperedges)
-    print("Number of edges:", hypergraph.num_edges)
-    print("Number of vertices:", hypergraph.num_vertices)
-    print("Node features:", hypergraph.node_features)
-    # print("Adjacency matrix:", hypergraph.adjacency_matrix)  # Uncomment if needed
-    print("Nodes:", hypergraph.nodes)
-    print("Hyperedges:", hypergraph.hyperedges)
+        for j, hyperedge in enumerate(self.hyperedges):
+            for node in hyperedge:
+                if node in node_to_idx:
+                    matrix[node_to_idx[node], j] = 1.0
+        return matrix
 
-    hyper_vocab.append(hypergraph.nodes)
-    for hyperedge in hypergraph.hyperedges:
-        hyper_vocab.append(hyperedge)
+    def _create_node_features(self) -> torch.Tensor:
+        """Create node feature matrix."""
+        features = torch.zeros(self.num_nodes, dtype=torch.long)
+        for i, node in enumerate(self.nodes):
+            features[i] = self.word_to_index.get(node, self.word_to_index.get("<UNK>", 1))
+        return features
 
-print("Hyper vocab:", hyper_vocab)
+    def get_adjacency_matrix(self) -> torch.Tensor:
+        """Compute node adjacency matrix from incidence matrix."""
+        # A = H * H^T - D_v where D_v is degree matrix
+        H = self.incidence_matrix
+        A = torch.mm(H, H.t())
+        # Remove self-loops (diagonal elements)
+        A.fill_diagonal_(0)
+        return A
 
-input_text = "test"
+class HypergraphConvLayer(nn.Module):
+    """Hypergraph Convolution Layer based on HGNN formulation."""
 
-class HypergraphLSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1, bidirectional=False, dropout=0.):
-        super(HypergraphLSTM, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.num_layers = num_layers
-        self.bidirectional = bidirectional
-        self.normalize = nn.SyncBatchNorm(input_dim)
-        self.dropout = dropout
-        self.params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+    def __init__(self, in_features: int, out_features: int, dropout: float = 0.1):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
 
-        self.embedding = nn.Embedding(input_dim, hidden_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers=num_layers, bidirectional=bidirectional, dropout=dropout)
-        self.fc = nn.Linear(hidden_dim * (2 if bidirectional else 1), output_dim)
-        self.fc1 = nn.Linear(784, 128)  # input layer (28x28 images) -> hidden layer (128 units)
-        self.fc2 = nn.Linear(128, 64)  # hidden layer (128 units) -> hidden layer (64 units)
-        self.fc3 = nn.Linear(64, 32)  # hidden layer (64 units) -> hidden layer (32 units)
-        self.fc4 = nn.Linear(32, 10)
-        
+        self.linear = nn.Linear(in_features, out_features)
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(out_features)
 
-    def forward(self, x, lengths):
-        x = self.normalize(x)
-        x = torch.relu(self.fc(x))
-        x = torch.relu(self.fc1(x))  # activation function for hidden layer
-        x = torch.relu(self.fc2(x))  # activation function for hidden layer
-        x = torch.relu(self.fc3(x))  # activation function for hidden layer
-        x = self.fc4(x)
-        # Embed the input
-        x = self.embedding(x)
+    def forward(self, x: torch.Tensor, incidence_matrix: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of hypergraph convolution.
+        Args:
+            x: Node features (num_nodes, in_features)
+            incidence_matrix: Incidence matrix (num_nodes, num_hyperedges)
+        """
+        # Normalize incidence matrix
+        H = incidence_matrix
+        D_v = torch.diag(H.sum(dim=1))  # Node degree matrix
+        D_e = torch.diag(H.sum(dim=0))  # Hyperedge degree matrix
 
-        # Pack the input sequence
-        packed_input = pack_padded_sequence(x, lengths, batch_first=True)
+        # Add small epsilon to avoid division by zero
+        D_v_inv_sqrt = torch.diag(1.0 / (torch.sqrt(torch.diag(D_v)) + 1e-8))
+        D_e_inv = torch.diag(1.0 / (torch.diag(D_e) + 1e-8))
 
-        # Run the input through the LSTM
-        packed_output, (h_n, c_n) = self.lstm(packed_input)
+        # Hypergraph Laplacian: L = D_v^(-1/2) * H * D_e^(-1) * H^T * D_v^(-1/2)
+        L = torch.mm(torch.mm(torch.mm(D_v_inv_sqrt, H), D_e_inv),
+                     torch.mm(H.t(), D_v_inv_sqrt))
 
-        # Unpack the output sequence
-        output, _ = pad_packed_sequence(packed_output, batch_first=True)
-
-        # normalize output
-        output = self.normalize(output)
-
-        # Apply dropout
-        output = F.dropout(output, p=self.dropout, training=self.training)
-
-        # Apply the linear layer
-        output = self.fc(output)
-
-        # Reshape the output to match the expected shape
-        output = output.view(-1, self.output_dim)
-
-        return output
-
-class MambaNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(MambaNetwork, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-        self.hypergraph_lstm = HypergraphLSTM(input_dim, hidden_dim, hidden_dim)
-        self.mamba_layer = MambaLayer(hidden_dim, hidden_dim, output_dim)
-
-    def forward(self, hypergraph, lengths):
-        # Run the hypergraph through the Hypergraph LSTM
-        output = self.hypergraph_lstm(hypergraph, lengths)
-
-        # Run the output through the Mamba layer
-        output = self.mamba_layer(output)
-
-        return output
-
-class MambaLayer(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(MambaLayer, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-  
-    def forward(self, x):
-        # Apply the first linear layer
-        x = F.relu(self.fc1(x))
-
-        # Apply the second linear layer
-        x = self.fc2(x)
+        # Apply convolution
+        x = torch.mm(L, x)
+        x = self.linear(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.layer_norm(x)
 
         return x
+class HypergraphAttention(nn.Module):
+    """Multi-head attention for hypergraphs."""
 
-class KANSpikingNeuron(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(KANSpikingNeuron, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
+    def __init__(self, embed_dim: int, num_heads: int, dropout: float = 0.1):
+        super().__init__()
+        assert embed_dim % num_heads == 0
 
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-        self.lstm = nn.LSTM(input_dim, hidden_dim)
-        self.params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    def forward(self, x):
-        # Apply the first linear layer
-        x = F.relu(self.fc1(x))
-
-        # Apply the second linear layer
-        x = self.fc2(x)
-
-        # Convert the output to spikes using the KAN model
-        spikes = torch.zeros_like(x)
-        for t in range(x.shape[1]):
-            spikes[:, t] = (x[:, t] > 0).float()
-
-        return spikes
-    
-class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, embed_dim, num_heads):
-        super(MultiHeadSelfAttention, self).__init__()
-        self.num_heads = num_heads
         self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
 
-        assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
-        self.depth = embed_dim // num_heads
+        self.q_proj = nn.Linear(embed_dim, embed_dim)
+        self.k_proj = nn.Linear(embed_dim, embed_dim)
+        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
 
-        self.wq = nn.Linear(embed_dim, embed_dim)
-        self.wk = nn.Linear(embed_dim, embed_dim)
-        self.wv = nn.Linear(embed_dim, embed_dim)
-        self.dense = nn.Linear(embed_dim, embed_dim)
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(dropout)
+        self.scale = 1.0 / math.sqrt(self.head_dim)
 
-    def split_heads(self, x, batch_size):
-        x = x.view(batch_size, -1, self.num_heads, self.depth)
-        return x.permute(0, 2, 1, 3)
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        batch_size, seq_len, embed_dim = x.size()
 
-    def forward(self, v, k, q, mask=None):
-        batch_size = q.size(0)
+        # Project to Q, K, V
+        Q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        K = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        V = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
 
-        q = self.wq(q)
-        k = self.wk(k)
-        v = self.wv(v)
-
-        q = self.split_heads(q, batch_size)
-        k = self.split_heads(k, batch_size)
-        v = self.split_heads(v, batch_size)
-
-        matmul_qk = torch.matmul(q, k.transpose(-2, -1))
-        depth = k.size(-1)
-        logits = matmul_qk / torch.sqrt(torch.tensor(depth, dtype=torch.float32))
+        # Scaled dot-product attention
+        scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
 
         if mask is not None:
-            logits += (mask * -1e9)
+            scores.masked_fill_(mask == 0, float('-inf'))
 
-        attention_weights = F.softmax(logits, dim=-1)
-        output = torch.matmul(attention_weights, v)
-        output = output.permute(0, 2, 1, 3).contiguous()
-        output = output.view(batch_size, -1, self.embed_dim)
+        attn_weights = F.softmax(scores, dim=-1)
+        attn_weights = self.dropout(attn_weights)
 
-        output = self.dropout(output)
-        return self.dense(output)
-    
-context_size = len(corpus)
-embedding_dim = 128
+        attn_output = torch.matmul(attn_weights, V)
+        attn_output = attn_output.transpose(1, 2).contiguous().view(
+            batch_size, seq_len, embed_dim)
 
-class Transformer(nn.Module):
-    def __init__(self, embed_dim, num_heads, input_dim, hidden_dim, output_dim, context_size):
-        super(Transformer, self).__init__()
-        self.context_size = context_size
-        self.attention = MultiHeadSelfAttention(input_dim, hidden_dim)
-        self.mamba = MambaLayer
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim                                               
-        self.embedding = HypergraphLSTM(embed_dim, context_size, output_dim)  # Initialize HypergraphLSTM with embed_dim and context_size
-        self.encoder = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=num_heads, dim_feedforward=hidden_dim)
-        self.decoder = nn.TransformerDecoderLayer(d_model=embed_dim, nhead=num_heads, dim_feedforward=hidden_dim)
-        self.encoder_layer = nn.TransformerEncoder(self.encoder, num_layers=1)
-        self.decoder_layer = nn.TransformerDecoder(self.decoder, num_layers=1)
-        self.fc = nn.Linear(embed_dim, output_dim)
-    
-    def forward(self, x):
-        out = self.fc(out.squeeze(0))
-        out = self.fc1(out.reshape(-1, 4096))
-        out = self.decoder_layer(x)
-        out = self.fc(out)
-        return out
-       # reshape out to (batch_size, 4096)
+        return self.out_proj(attn_output)
 
-trans_model = Transformer(embed_dim=128, num_heads=8, input_dim=512, hidden_dim=256, output_dim=10, context_size=100)
+class ModernMambaBlock(nn.Module):
+    """Simplified Mamba-inspired state space block."""
 
-class NLPModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(NLPModel, self).__init__()
-        self.fc1 = nn.Linear(128, 64)  # example layer
-        self.fc2 = nn.Linear(64, 10)  # example layer
-        self.lstm1 = nn.LSTM(input_dim, hidden_dim)
-        self.transformer = trans_model
-        self.relu = torch.nn.LeakyReLU
-        self.dataset = dataset
-        self.hypergraph = hyper_vocab
-        self.mamba_network = MambaNetwork(input_dim, hidden_dim, output_dim)
-        self.device = torch.device("cuda:GPU 0" if torch.cuda.is_available() else "cpu")
-        self.lookup_layer = lookup.create_lookup_layer
+    def __init__(self, d_model: int, d_state: int = 16, expand: int = 2):
+        super().__init__()
+        self.d_model = d_model
+        self.d_state = d_state
+        self.d_inner = int(expand * d_model)
+
+        self.in_proj = nn.Linear(d_model, self.d_inner * 2, bias=False)
+        self.conv1d = nn.Conv1d(
+            in_channels=self.d_inner,
+            out_channels=self.d_inner,
+            kernel_size=3,
+            bias=True,
+            padding=1,
+            groups=self.d_inner,
+        )
+        self.activation = nn.SiLU()
+        self.out_proj = nn.Linear(self.d_inner, d_model, bias=False)
+
+        # State space parameters
+        self.A_log = nn.Parameter(torch.log(torch.arange(1, d_state + 1, dtype=torch.float32)))
+        self.D = nn.Parameter(torch.ones(self.d_inner))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch, length, dim = x.shape
+
+        # Input projection
+        x_and_res = self.in_proj(x)  # (batch, length, 2 * d_inner)
+        x, res = x_and_res.split(split_size=self.d_inner, dim=-1)
+
+        # Convolution
+        x = x.transpose(-1, -2)  # (batch, d_inner, length)
+        x = self.conv1d(x)
+        x = x.transpose(-1, -2)  # (batch, length, d_inner)
+
+        # Activation
+        x = self.activation(x)
+
+        # State space computation (simplified)
+        A = -torch.exp(self.A_log.float())  # (d_state,)
+        y = x * self.D  # Skip connection
+
+        # Output projection
+        y = y * self.activation(res)
+        return self.out_proj(y)
+
+class HypergraphDataset(Dataset):
+    """Dataset for hypergraph-based text processing."""
+
+    def __init__(self, texts: List[str], vocab: List[str], max_seq_len: int = 64, max_hyperedges: int = 128):
+        self.texts = texts
         self.vocab = vocab
-        self.selfattention = MultiHeadSelfAttention(input_dim, hidden_dim)
-        self.lstm2 = nn.LSTM(input_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
-        self.softmax = nn.Softmax(dim=1)
-        self.conversation_history = []
-        self.input_dim = input_dim
-        self.text_to_hypergraph = dataset.text_to_hypergraph(text=input_text)
+        self.max_seq_len = max_seq_len
+        self.max_hyperedges = max_hyperedges
+        self.word_to_index = {word: i for i, word in enumerate(vocab)}
+        self.hypergraphs = self._create_hypergraphs()
+
+    def _create_hypergraphs(self) -> List[Hypergraph]:
+        """Create hypergraphs from texts."""
+        hypergraphs = []
+        for text in self.texts:
+            words = text.lower().split()
+            # Pad or truncate to max_seq_len
+            if len(words) > self.max_seq_len:
+                words = words[:self.max_seq_len]
+            else:
+                words.extend(["<PAD>"] * (self.max_seq_len - len(words)))
+
+            # Create hyperedges (sliding window + sentence-level connections)
+            hyperedges = []
+            # Bigram hyperedges
+            for i in range(len(words) - 1):
+                if words[i] != "<PAD>" and words[i+1] != "<PAD>":
+                    hyperedges.append((words[i], words[i+1]))
+
+            # Trigram hyperedges
+            for i in range(len(words) - 2):
+                if all(w != "<PAD>" for w in words[i:i+3]):
+                    hyperedges.append(tuple(words[i:i+3]))
+
+            # Limit number of hyperedges
+            if len(hyperedges) > self.max_hyperedges:
+                hyperedges = hyperedges[:self.max_hyperedges]
+
+            hypergraph = Hypergraph(words, hyperedges, self.word_to_index)
+            hypergraphs.append(hypergraph)
+
+        return hypergraphs
+
+    def __len__(self) -> int:
+        return len(self.hypergraphs)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        hypergraph = self.hypergraphs[idx]
+
+        # Pad incidence matrix to max_hyperedges
+        incidence_matrix = hypergraph.incidence_matrix
+        current_hyperedges = incidence_matrix.size(1)
+
+        if current_hyperedges < self.max_hyperedges:
+            # Pad with zeros
+            padding = torch.zeros(self.max_seq_len, self.max_hyperedges - current_hyperedges)
+            incidence_matrix = torch.cat([incidence_matrix, padding], dim=1)
+
+        return {
+            'node_features': hypergraph.node_features,
+            'incidence_matrix': incidence_matrix,
+            'adjacency_matrix': hypergraph.get_adjacency_matrix(),
+            'num_hyperedges': torch.tensor(min(current_hyperedges, self.max_hyperedges), dtype=torch.long)
+        }
+class ModernHypergraphNLP(nn.Module):
+    """Modern hypergraph-based NLP model."""
+
+    def __init__(
+        self,
+        vocab_size: int,
+        embed_dim: int = 256,
+        hidden_dim: int = 512,
+        num_layers: int = 4,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+        max_seq_len: int = 64
+    ):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim
         self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-       # self.predict_next_statement = predict_next_statement
-     #   self.get_sequences_from_dataset = get_sequences_from_dataset
-        self.vocab_size = len(self.vocab)
-        self.kanskp = KANSpikingNeuron(input_dim, hidden_dim, output_dim)
-        self.embedding = nn.Embedding(self.vocab_size, self.hidden_dim)
-        self.params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        self.summary()
+        self.max_seq_len = max_seq_len
 
-    def call(self, inputs):
-        if self.lookup_layer is None:
-            raise ValueError("Lookup layer not created. Call create_lookup_layer first.")
-        return self.lookup_layer(inputs)
+        # Embedding layers
+        self.token_embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.pos_embedding = nn.Parameter(torch.zeros(1, max_seq_len, embed_dim))
 
-    def params(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        # Hypergraph layers
+        self.hypergraph_layers = nn.ModuleList([
+            HypergraphConvLayer(embed_dim if i == 0 else hidden_dim, hidden_dim, dropout)
+            for i in range(num_layers)
+        ])
 
-    def summary(self):
-        print("NLP Model Summary:")
-        print(f"Input Dimension: {self.input_dim}")
-        print(f"Hidden Dimension: {self.hidden_dim}")
-        print(f"Output Dimension: {self.output_dim}")
-        print(f"Vocabulary Size: {self.vocab_size}")
-        print(f"Embedding Size: {self.embedding.embedding_dim}")
-        print(f"Mamba Network Input Dimension: {self.mamba_network.input_dim}")
-        print(f"Mamba Network Hidden Dimension: {self.mamba_network.hidden_dim}")
-        print(f"Mamba Network Output Dimension: {self.mamba_network.output_dim}")
-        print(f"Params: {self.params}")
-        print(f"Device: {self.device}")
-        print(f"LSTM Input Dimension: {self.lstm1.input_size}")
-        print(f"LSTM Hidden Dimension: {self.lstm1.hidden_size}")
-        #print(f"LSTM Output Dimension: {self.lstm.output_dim}")
-        print(f"LSTM Batch First: {self.lstm1.batch_first}")
-        print(f"LSTM Bidirectional: {self.lstm1.bidirectional}")
-        print(f"LSTM Num Layers: {self.lstm1.num_layers}")
-        print(f"LSTM Input Dimension: {self.lstm2.input_size}")
-        print(f"LSTM Hidden Dimension: {self.lstm2.hidden_size}")
-        #print(f"LSTM Output Dimension: {self.lstm.output_dim}")
-        print(f"LSTM Batch First: {self.lstm2.batch_first}")
-        print(f"LSTM Bidirectional: {self.lstm2.bidirectional}")
-        print(f"LSTM Num Layers: {self.lstm2.num_layers}")
-        print(f"Transformer Input Dim: {self.transformer.input_dim}")
-        print(f"Transformer Hidden Dim: {self.transformer.hidden_dim}")
-        print(f"Transformer Output Dim: {self.transformer.output_dim}")
-        print(f"KANSKP Input Dimension: {self.kanskp.input_dim}")
-        print(f"KANSKP Hidden Dimension: {self.kanskp.hidden_dim}")
-        print(f"KANSKP Output Dimension: {self.kanskp.output_dim}")
-        print(f"KANSKP Params: {self.kanskp.params}")
+        # Attention and Mamba blocks
+        self.attention_layers = nn.ModuleList([
+            HypergraphAttention(hidden_dim, num_heads, dropout)
+            for _ in range(num_layers)
+        ])
 
-    def forward(self, hypergraph, lengths):
-        # Convert the hypergraph to a text
-        for hypergraphs in dataset.hypergraphs:
-            text = ''
-            hypergraph = hypergraphs[0] + ' ' + hypergraphs[1] + ' '
-            for node in hypergraphs.nodes:
-                text += node + ' '
-                for hyperedge in hypergraphs.hyperedges:
-                      text += hyperedge[0] + ' ' + hyperedge[1] + ' '
-                      x = self.text_to_hypergraph(text)
-                      node_features = hypergraphs.create_node_features(nodes)
-                      adjacency_matrix = hypergraphs.set_adjacency_matrix(hypergraphs.adjacency_matrix)
-                      x = torch.cat((node_features, adjacency_matrix), dim=1)
-                      x = x.view(1, -1)
-                      h0 = torch.zeros(1, self.hidden_dim).to(self.device)
-                      c0 = torch.zeros(1, self.hidden_dim).to(self.device)
-                      output = self.mamba_network(x, lengths)
-                      self.selfattention(output)
-                      return output
+        self.mamba_blocks = nn.ModuleList([
+            ModernMambaBlock(hidden_dim)
+            for _ in range(num_layers)
+        ])
 
-    def get_hypergraph(self, text):
-        return dataset.text_to_hypergraph(text)
+        # Output layers
+        self.layer_norm = nn.LayerNorm(hidden_dim)
+        self.output_projection = nn.Linear(hidden_dim, vocab_size)
+        self.dropout = nn.Dropout(dropout)
 
-    def get_sequences_from_dataset(self, dataset, batch_size):
-        sequences = []
-        for i in range(0, len(dataset), batch_size):
-            batch = dataset[i:i+batch_size]
-            sequences.append(batch)
-        return sequences
+        # Initialize weights
+        self._init_weights()
 
-    def predict_next_statement(sequences):
-        # Initialize the LSTM model
-        sequences = text.split(".")
+    def _init_weights(self):
+        """Initialize model weights."""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                torch.nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    torch.nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Embedding):
+                torch.nn.init.normal_(module.weight, mean=0, std=0.02)
 
-        lstm = self.lstm1(input_dim=len(sequences[0]), hidden_dim=128, num_layers=1)
+    def forward(
+        self,
+        node_features: torch.Tensor,
+        incidence_matrix: torch.Tensor,
+        num_hyperedges: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        """
+        Forward pass.
+        Args:
+            node_features: Node feature indices (batch_size, num_nodes)
+            incidence_matrix: Incidence matrix (batch_size, num_nodes, max_hyperedges)
+            num_hyperedges: Actual number of hyperedges per sample (batch_size,)
+            attention_mask: Attention mask (batch_size, num_nodes)
+        """
+        batch_size, num_nodes = node_features.shape
 
-        # Convert the sequences to tensors
-        sequences_tensor = torch.tensor(sequences)
+        # Embedding
+        x = self.token_embedding(node_features)  # (batch_size, num_nodes, embed_dim)
+        x = x + self.pos_embedding[:, :num_nodes, :]
+        x = self.dropout(x)
 
-        # Initialize the hidden and cell states
-        h0 = torch.zeros(1, 1, 128)
-        c0 = torch.zeros(1, 1, 128)
-
-        # Run the sequences through the LSTM
-        out, _ = lstm(sequences_tensor, (h0, c0))
-
-        # Get the output for the last time step
-        last_output = out[-1, :, :]
-
-        # Apply a linear layer to the output
-        fc = nn.Linear(128, len(vocab))
-        next_statement_logits = fc(last_output)
-
-        # Predict the next statement using the softmax function
-        next_statement_probs = torch.softmax(next_statement_logits, dim=1)
-        next_statement_idx = torch.argmax(next_statement_probs, dim=1).item()
-
-    # Return the predicted next statement
-        return vocab[next_statement_idx]
-
-    def memorize(self, text):
-        self.conversation_history.append(text)
-        self.ltm.append(self.conversation_history)
-        print(self.ltm)
-
-    def respond(self, input_text):
-        # Ensure input_text is a string
-        if not isinstance(input_text, str):
-            raise TypeError("Input text must be a string.")
-    
-        # Ensure dataset has a text_to_hypergraph attribute
-        if not hasattr(self.dataset, 'text_to_hypergraph'):
-            raise AttributeError("Dataset object does not have a text_to_hypergraph attribute.")
-    
-        # Convert input text to a hypergraph
-        input_hypergraph = self.dataset.text_to_hypergraph(input_text)
-    
-        # Initialize the hidden state and cell state for the LSTM
-        h0 = torch.zeros(1, 1, self.hidden_dim).to(self.device)
-        c0 = torch.zeros(1, 1, self.hidden_dim).to(self.device)
-    
-        # Initialize the output sequence
+        # Process each item in batch
         outputs = []
-    
-        # Run the input hypergraph through the model
-        x = self.embedding(torch.tensor([self.vocab_size - 1]).to(self.device))  # Start with a special "start" token
-        x = x.view(1, 1, -1)
-    
-        for i in range(20):  # Generate a sequence of 20 words
-            out, (h0, c0) = self.lstm2(x, (h0, c0))
-            out = self.fc1(out.squeeze(0))
-            out = self.softmax(out)
-            out = self.selfattention(out)
-            word_idx = torch.argmax(out, dim=1).item()
-            if word_idx == self.vocab_size - 1:  # End with a special "end" token
-                break
-            outputs.append(self.vocab[word_idx])
-            x = self.embedding(torch.tensor([word_idx]).to(self.device)).view(1, 1, -1)
-            next_statement = self.predict_next_statement(x)
-        # Generate a response based on the output sequence and the predicted next statement
-        response = ' '.join(outputs) + ' ' + next_statement
-        return response
+        for i in range(batch_size):
+            node_emb = x[i]  # (num_nodes, embed_dim)
+            inc_mat = incidence_matrix[i]  # (num_nodes, max_hyperedges)
 
-    def train(rank, world_size, dataset, input_dim, hidden_dim, output_dim):
-        rank = int(rank)
-        world_size = int(world_size)
+            # Mask out padded hyperedges
+            valid_hyperedges = num_hyperedges[i].item()
+            if valid_hyperedges < inc_mat.size(1):
+                inc_mat = inc_mat[:, :valid_hyperedges]
 
-        torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
-        torch.cuda.set_device(rank)
-        model = nlp_model.to(rank)
-        init_process_group("nccl", rank=rank, world_size=world_size)
+            # Skip if no hyperedges
+            if inc_mat.size(1) == 0:
+                outputs.append(node_emb)
+                continue
 
-        torch.cuda.set_device(rank)
-        ddp_model = DDP(model, device_ids=[rank])
+            # Hypergraph convolution layers
+            for j, (hg_layer, attn_layer, mamba_block) in enumerate(
+                zip(self.hypergraph_layers, self.attention_layers, self.mamba_blocks)
+            ):
+                # Hypergraph convolution
+                node_emb = hg_layer(node_emb, inc_mat)
 
-        dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-        criterion = nn.MSELoss()
-        optimizer = Adam(ddp_model.parameters(), lr=0.001)
+                # Self-attention (add batch dimension)
+                node_emb_batched = node_emb.unsqueeze(0)  # (1, num_nodes, hidden_dim)
+                attn_out = attn_layer(node_emb_batched)
+                node_emb = attn_out.squeeze(0)  # (num_nodes, hidden_dim)
+
+                # Mamba block
+                node_emb_batched = node_emb.unsqueeze(0)  # (1, num_nodes, hidden_dim)
+                mamba_out = mamba_block(node_emb_batched)
+                node_emb = mamba_out.squeeze(0)  # (num_nodes, hidden_dim)
+
+            outputs.append(node_emb)
+
+        # Stack outputs
+        x = torch.stack(outputs, dim=0)  # (batch_size, num_nodes, hidden_dim)
+
+        # Final processing
+        x = self.layer_norm(x)
+        logits = self.output_projection(x)  # (batch_size, num_nodes, vocab_size)
+
+        return logits
+
+    def generate(self, input_text: str, word_to_index: Dict[str, int],
+                 index_to_word: Dict[int, str], max_length: int = 20) -> str:
+        """Generate text given input."""
+        self.eval()
+        device = next(self.parameters()).device
+
+        words = input_text.lower().split()
+        original_len = len(words)
+
+        # Pad to max_seq_len
+        if len(words) > self.max_seq_len:
+            words = words[:self.max_seq_len]
+        else:
+            words.extend(["<PAD>"] * (self.max_seq_len - len(words)))
+
+        # Create hyperedges
+        hyperedges = []
+        # Bigram hyperedges
+        for i in range(original_len - 1):
+            hyperedges.append((words[i], words[i+1]))
+        # Trigram hyperedges
+        for i in range(original_len - 2):
+            hyperedges.append(tuple(words[i:i+3]))
+
+        hypergraph = Hypergraph(words, hyperedges, word_to_index)
+
+        with torch.no_grad():
+            node_features = hypergraph.node_features.unsqueeze(0).to(device)
+            incidence_matrix = hypergraph.incidence_matrix.unsqueeze(0).to(device)
+
+            # Pad incidence matrix to max_hyperedges (64)
+            current_hyperedges = incidence_matrix.size(2)
+            max_hyperedges = 64  # Should match dataset max_hyperedges
+
+            if current_hyperedges < max_hyperedges:
+                padding = torch.zeros(1, self.max_seq_len, max_hyperedges - current_hyperedges, device=device)
+                incidence_matrix = torch.cat([incidence_matrix, padding], dim=2)
+            elif current_hyperedges > max_hyperedges:
+                incidence_matrix = incidence_matrix[:, :, :max_hyperedges]
+                current_hyperedges = max_hyperedges
+
+            num_hyperedges = torch.tensor([current_hyperedges], dtype=torch.long, device=device)
+
+            logits = self.forward(node_features, incidence_matrix, num_hyperedges)
+
+            # Get the last non-padding token for generation
+            last_valid_idx = original_len - 1
+            probs = F.softmax(logits[0, last_valid_idx, :], dim=-1)
+            next_token_id = torch.multinomial(probs, 1).item()
+
+            if next_token_id in index_to_word and index_to_word[next_token_id] not in ["<PAD>", "<UNK>"]:
+                return input_text + " " + index_to_word[next_token_id]
+            else:
+                return input_text + " <UNK>"
 
 
-        for epoch in range(128):  # Dummy epoch count
-            for node_features, adjacency_matrix in dataloader:
-                node_features = node_features[0].to(rank)
-                adjacency_matrix = adjacency_matrix[0].to(rank)
-   
-    def spawn_train(world_size):
-        mp.spawn(train,
-             args=(world_size,),
-             nprocs=world_size,
-             join=True)
-    
-input_dim = 4096
-hidden_dim = 4096
-input_hidden_dim = 1024
-output_dim = 4096
-nlp_model = NLPModel(input_dim, hidden_dim, output_dim)
-spawn_train(4)
+def train_model(model: ModernHypergraphNLP, dataset: HypergraphDataset,
+                num_epochs: int = 10, batch_size: int = 8, lr: float = 1e-4):
+    """Training function."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    criterion = nn.CrossEntropyLoss(ignore_index=0)  # Ignore padding
+
+    model.train()
+    for epoch in range(num_epochs):
+        total_loss = 0
+        for batch_idx, batch in enumerate(dataloader):
+            node_features = batch['node_features'].to(device)
+            incidence_matrix = batch['incidence_matrix'].to(device)
+            num_hyperedges = batch['num_hyperedges'].to(device)
+
+            # Shift for language modeling
+            input_features = node_features[:, :-1]
+            target_features = node_features[:, 1:]
+            input_incidence = incidence_matrix[:, :-1, :]
+
+            optimizer.zero_grad()
+
+            logits = model(input_features, input_incidence, num_hyperedges)
+            loss = criterion(logits.reshape(-1, model.vocab_size), target_features.reshape(-1))
+
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        avg_loss = total_loss / len(dataloader)
+        print(f"Epoch {epoch+1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
+
+# Example usage
+if __name__ == "__main__":
+    # Create dataset with max_hyperedges parameter
+    dataset = HypergraphDataset(corpus, vocab, max_seq_len=512, max_hyperedges=64)
+
+    # Create model
+    model = ModernHypergraphNLP(
+        vocab_size=len(vocab),
+        embed_dim=512,
+        hidden_dim=1024,
+        num_layers=8,
+        num_heads=16,
+        dropout=0.1,
+        max_seq_len=512
+    )
+
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
+
+    # Train model
+    train_model(model, dataset, num_epochs=5, batch_size=4)
+
+    # Generate text
+    word_to_index = dataset.word_to_index
+    index_to_word = {i: word for word, i in word_to_index.items()}
+
+    input_text = "this is a simple"
+    generated = model.generate(input_text, word_to_index, index_to_word)
+    print(f"Input: {input_text}")
+    print(f"Generated: {generated}")
