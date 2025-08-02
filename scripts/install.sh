@@ -1,6 +1,12 @@
 #!/bin/bash
 # Installation script for Oni
 
+set -e
+
+# Determine project root directory and move there so relative paths work
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "$SCRIPT_DIR/.."
+
 echo "Installing Oni AGI System..."
 
 # Check Python version
@@ -20,8 +26,8 @@ source oni_env/bin/activate
 # Upgrade pip
 pip install --upgrade pip
 
-# Install requirements
-echo "Installing requirements..."
+# Install Python dependencies
+echo "Installing requirements from requirements.txt..."
 pip install -r requirements.txt
 
 # Install Oni in development mode

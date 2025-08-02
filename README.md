@@ -234,9 +234,12 @@ The ONI Token smart contract provides the following functions:
 git clone https://github.com/ahricat/oni.git
 cd oni
 
-# Run installation script
+# Run installation script (installs packages from requirements.txt)
 chmod +x scripts/install.sh
 ./scripts/install.sh
+
+# Or install Python dependencies manually
+pip install -r requirements.txt
 
 # Activate the environment
 source oni_env/bin/activate
