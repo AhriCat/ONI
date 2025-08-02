@@ -1,3 +1,4 @@
+flake8
 astropy
 beautifulsoup4
 ccxt
@@ -65,3 +66,4 @@ websockets
 Werkzeug
 yfinance
 PyYAML
+
