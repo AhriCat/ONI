@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import time
 import platform
 
-from modules.oni_executive_function import ExecutiveDecisionNet
+from modules.decision import ExecutiveDecisionNet
 
 class ParietalCortexEmulator(nn.Module):
     def __init__(self, tactile_dim: int, vision_dim: int, audio_dim: int, intent_dim: int, output_dim: int):
