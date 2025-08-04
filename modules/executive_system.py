@@ -23,7 +23,7 @@ import torch
 
 from .config import ExecutiveFunctionConfig
 from .sensory import SensoryInput
-from .executive import TimeAwareExecutiveNet
+from decision import TimeAwareExecutiveNet
 from .motor import MotorOutput
 from .memory import WorkingMemoryModule
 
