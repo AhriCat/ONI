@@ -1,11 +1,11 @@
-
+from modules.attention.efficient_attention import EfficientAttention 
 class ChainOfThought(nn.Module):
     def __init__(self, input_dim, memory_size):
         super().__init__()
         self.input_dim = input_dim
         self.memory_size = memory_size
         self.memory = nn.Parameter(torch.randn(memory_size, input_dim) / math.sqrt(input_dim))  # Proper initialization
-        self.attention = nn.MultiheadAttention(input_dim, num_heads=8, batch_first=True)
+        self.attention = EfficientAttention(input_dim, num_heads=8, batch_first=True)
         self.norm = nn.LayerNorm(input_dim)
         self.current_size = 0
         self.pointer = 0
