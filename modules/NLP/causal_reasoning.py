@@ -10,7 +10,7 @@ class CausalGraph(nn.Module):
     between variables in a domain.
     """
     
-    def __init__(self, num_variables: int, hidden_dim: int = 128):
+    def __init__(self, num_variables: int, hidden_dim: int = 64):
         """
         Initialize a causal graph.
         
@@ -158,7 +158,7 @@ class CausalReasoning(nn.Module):
     Module for causal reasoning, inference, and counterfactual analysis.
     """
     
-    def __init__(self, input_dim: int, hidden_dim: int = 256, num_variables: int = 20):
+    def __init__(self, input_dim: int, hidden_dim: int = 64, num_variables: int = 12):
         """
         Initialize causal reasoning module.
         
