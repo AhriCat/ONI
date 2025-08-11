@@ -250,10 +250,10 @@ python oni_core.py
 
 ### **Requirements**
 
-  * Python 3.8 or higher
-  * CUDA-compatible GPU (recommended)
-  * 16GB+ RAM
-  * 50GB+ storage for models and data
+  * Python 3.12 
+  * CUDA-compatible GPU 3080ti or higher, training requires 10 3090s or more (recommended)
+  * 48GB+ RAM
+  * 100GB+ storage for models and data
 
 ### **Blockchain Node Setup**
 
