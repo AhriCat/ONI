@@ -94,8 +94,8 @@ The ONI blockchain provides a decentralized infrastructure for:
 
 ### **Blockchain Features**
 
-  * **Ultra-Low Gas Fees**: Designed for high throughput with minimal transaction costs
-  * **Fast Block Times**: 30-second-20minute target block time for relatively fast confirmations. Contributions to be confirmed in seconds if proof of consensus is complete.
+  * **Low Gas Fees**: Designed for high throughput with minimal transaction costs
+  * **Fast Block Times**: 10 second-20minute target block time for relatively fast confirmations. Contributions to be confirmed in seconds if proof of consensus is complete. Proof of education still in the works, crypto stuff is in prototype phase only
   * **Proof of Compute Consensus**: Rewards AI model training and contributions
   * **Dynamic Difficulty Adjustment**: Maintains consistent block times
   * **Adaptive Gas Pricing**: Automatically adjusts based on network demand
