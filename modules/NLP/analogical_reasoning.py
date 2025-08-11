@@ -13,7 +13,7 @@ class StructureMapping(nn.Module):
     structure.
     """
     
-    def __init__(self, embedding_dim: int, hidden_dim: int = 256):
+    def __init__(self, embedding_dim: int, hidden_dim: int = 64):
         """
         Initialize structure mapping module.
         
@@ -262,7 +262,7 @@ class AnalogicalReasoning(nn.Module):
     Module for analogical reasoning and transfer learning.
     """
     
-    def __init__(self, input_dim: int, hidden_dim: int = 256, num_heads: int = 4):
+    def __init__(self, input_dim: int, hidden_dim: int = 64, num_heads: int = 2):
         """
         Initialize analogical reasoning module.
         
