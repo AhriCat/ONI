@@ -1,345 +1,286 @@
+# ONI — Operant Neural Intelligence
 
-# Oni
+ONI is a **modular repository of neural network components** designed to support research and development toward agentic AI systems. It provides a collection of PyTorch modules covering memory, reasoning, attention, emotion modeling, vision, audio, and tool integration—intended as building blocks that researchers and developers can study, adapt, and compose.
 
-Oni is a **modular, multi-modal AGI (Artificial General Intelligence) system** designed for **creativity, reasoning, and interaction across multiple environments and modalities** (text, image, audio, animation, robotics, VR, and more). Powered by cutting-edge architectures, including **transformer-based models, latent diffusion models**, and a **Quantum-Enhanced Memory system**, Oni is a **next-generation intelligence system** for real-world applications.
+**Important:** ONI is an experimental research project. The modules vary in maturity—some are well-developed implementations, others are prototypes or conceptual sketches. This is not a production-ready AGI system; it's a toolkit of components that may be useful for building toward more capable AI architectures.
 
-Oni is **decentralized at its core**, operating on a custom blockchain with Proof of Compute consensus to enable **global participation** in compute, training, and reinforcement learning, creating a truly open-source AI ecosystem **for the people, by the people**.
+---
 
------
+## What ONI Actually Is
 
-## **Core Architecture**
+ONI provides:
 
-### **Modular Intelligence System**
+- **Reusable neural modules** for memory systems, attention mechanisms, reasoning components, and multimodal processing
+- **Reference implementations** of concepts from cognitive architecture research
+- **Integration scaffolding** for combining modules into larger systems
+- **Training utilities** and example workflows
 
-Oni's architecture consists of several integrated components:
+ONI is *not* a complete AI system you can deploy. It's a component library and research codebase.
 
-1.  **Multimodal Sensory Cortex**
+---
 
-      * Text processing via advanced NLP modules
-      * Vision processing with transformers and OCR capabilities
-      * Audio processing with TTS/STT and music generation
-      * Cross-modal attention and fusion mechanisms
+## Module Overview
 
-2.  **Quantum-Enhanced Memory System (v2)**
-    Oni's memory is a sophisticated, multi-layered system that integrates principles from classical and quantum computing to achieve unparalleled performance in storing, retrieving, and processing information.
+### Memory Systems (`modules/memory/`)
 
-      * **Quantum Core**: Utilizes quantum computing concepts for highly efficient memory operations.
-          * **QuantumMemoryOracle**: Implements Grover's algorithm for near-instantaneous searching of vast memory spaces.
-          * **QuantumAssociativeMemory**: Employs quantum superposition and entanglement for rapid, context-aware associative recall of related memories.
-          * **QuantumMemoryEncoder**: Encodes classical data embeddings into quantum states for processing.
-      * **Multi-Layered Structure**:
-          * **Working Memory**: A short-term buffer for immediate context.
-          * **Episodic Memory**: Stores sequential, autobiographical experiences (e.g., conversations, events).
-          * **Semantic Memory**: Holds abstract knowledge, facts, and concepts.
-      * **Advanced Consolidation**:
-          * **Quantum Meditation & Sleep**: During sleep cycles, Oni uses quantum-inspired algorithms to meditate on its memories, consolidating information, identifying novel patterns, compressing data, and optimizing retrieval pathways.
-          * **Continuous Hopfield Networks**: Modern Hopfield networks provide robust pattern completion and error correction.
-          * **Fading & Snapshot Memory**: Implements mechanisms for memory decay and internal state preservation.
+Memory is one of ONI's more developed areas, offering multiple complementary approaches:
 
-3.  **Emotional Intelligence**
+| Module | Description |
+|--------|-------------|
+| `oni_memory.py` | Core memory manager integrating working, episodic, and semantic memory |
+| `oni_memoryv2.py` | Extended memory system with additional consolidation mechanisms |
+| `episodic_memory.py` | Stores sequential, autobiographical experiences with embedding layers |
+| `semantic_memory.py` | Abstract knowledge storage with pattern finding |
+| `working_memory_module.py` | Short-term context buffer |
+| `hopfield.py` | Sparse and continuous Hopfield networks for pattern completion |
+| `memory_consolidator.py` | Sleep-inspired memory consolidation |
+| `fading_memory.py` | Temporal decay mechanisms |
+| `snapshot_memory.py` | State preservation |
+| `spatial_memory.py` | Location-aware memory representations |
 
-      * Valence-arousal emotional modeling
-      * Energy management based on computational load
-      * Emotional feedback for learning modulation
-      * Context-aware emotional responses
+### Reasoning & NLP (`modules/NLP/`)
 
-4.  **Compassion Framework**
+Reasoning modules explore different approaches to structured inference:
 
-      * Agency, Capability, and Suffering (A, C, S) metrics
-      * Multi-agent negotiation with Pareto optimization
-      * Goal inference via Bayesian IRL
-      * Proof-carrying self-modification validation
+| Module | Description |
+|--------|-------------|
+| `oni_metacognition.py` | Self-monitoring, abductive reasoning, hypothesis generation |
+| `causal_reasoning.py` | Causal graph construction and intervention modeling |
+| `analogical_reasoning.py` | Cross-domain analogical mapping |
+| `counterfactual_reasoning.py` | "What if" scenario evaluation |
+| `multi_step_planning.py` | Goal decomposition and plan generation |
+| `oni_chain_of_thought.py` | Step-by-step reasoning traces |
+| `conflict_graph.py` | Principle conflict detection and resolution |
 
-5.  **Decision & Reasoning Engine**
+### Attention Mechanisms (`modules/attention/`)
 
-      * Chain-of-thought reasoning with memory integration
-      * Meta-cognitive monitoring and self-reflection
-      * Dynamic energy-modulated synaptic layers
-      * Uncertainty quantification and confidence estimation
+Several attention variants for different use cases:
 
-6.  **ONI Blockchain**
+| Module | Description |
+|--------|-------------|
+| `temporal_tri_attention.py` | Hierarchical attention at global, local, and temporal scales with sparsity |
+| `multi_modal_attention.py` | Cross-modal attention fusion |
+| `efficient_attention.py` | Computational optimizations |
+| `concept_similarity_memory_attention.py` | Memory-augmented attention |
+| `reformer_attention.py` | LSH-based efficient attention |
 
-      * Proof-of-Compute consensus mechanism
-      * Fast 3-second block times with ultra-low gas fees
-      * Model update tracking and contribution verification
-      * Decentralized training and inference rewards
+### Emotion & Values (`modules/emotion/`)
 
-### **Blockchain Integration**
+Modules for modeling affective states and ethical reasoning:
 
-The ONI blockchain provides a decentralized infrastructure for:
+| Module | Description |
+|--------|-------------|
+| `oni_emotions.py` | Valence-arousal emotional modeling with state tracking and decay |
+| `oni_compassion.py` | Multi-agent ethical framework with Agency, Capability, Suffering (ACS) metrics; Pareto optimization for multi-stakeholder decisions |
 
-  * **Proof-of-Compute**: Rewarding AI model training and inference
-  * **Contribution Tracking**: Verifying and recording training contributions
-  * **Model Versioning**: Tracking model updates and improvements
-  * **Reward Distribution**: Automatic token distribution for contributions
-  * **Decentralized Learning**: Global network for collaborative model training
+### Vision (`modules/vision/`)
 
------
+| Module | Description |
+|--------|-------------|
+| `oni_vision.py` | Vision transformer with OCR integration |
+| `vision_core.py` | Extended vision processing utilities |
 
-## **Features**
+### Audio (`modules/audio/`)
 
-### **Core Capabilities**
+| Module | Description |
+|--------|-------------|
+| `oni_audio.py` | Audio processing with TTS/STT hooks |
 
-  * **Modular Architecture**: Oni can be extended or optimized by adding or modifying individual modules.
-  * **Multi-modal Learning**: Supports text, vision, audio, animation, robotics, and VR/AR inputs and outputs.
-  * **Quantum-Enhanced Memory (v2)**: Integrates quantum computing principles for accelerated search, superior pattern recognition, and highly efficient associative recall.
-  * **Advanced Reasoning Modules**:
-      * **Chain-of-Thought Reasoning** for step-by-step logical processes.
-      * **Latent Space Operations** powered by Fat Diffuser, enabling abstract reasoning and imagination.
-      * **MetaCognition Module** for self-awareness and adaptive decision-making.
-      * **Mechanistic Chain-of-Thought** for clear and verifiable reasoning paths.
-      * **Emotional Energy** module for context-aware interactions.
-  * **Homeostatic Controller**: Dynamically adjusts internal parameters to maintain system stability.
-  * **Cross-Modality Fusion**: Combines reasoning across multiple modalities for seamless interactions.
+### Dynamics & Homeostasis
 
-### **Blockchain Features**
+| Module | Description |
+|--------|-------------|
+| `oni_homeostasis.py` | System stability regulation with anomaly detection, Hebbian-inspired adaptation |
+| `dynamics/energy_based_synapse.py` | Energy-modulated synaptic layers |
+| `dynamics/oni_dynLayer.py` | Dynamic neural layer implementations |
 
-  * **Low Gas Fees**: Designed for high throughput with minimal transaction costs
-  * **Fast Block Times**: 10 second-20minute target block time for relatively fast confirmations. Contributions to be confirmed in seconds if proof of consensus is complete. Proof of education still in the works, crypto stuff is in prototype phase only
-  * **Proof of Compute Consensus**: Rewards AI model training and contributions
-  * **Dynamic Difficulty Adjustment**: Maintains consistent block times
-  * **Adaptive Gas Pricing**: Automatically adjusts based on network demand
-  * **Efficient Memory Pool**: Prioritizes transactions by fee
-  * **Batch Transaction Processing**: Reduces overhead for multiple operations
-  * **Model Update Tracking**: Specialized support for AI model versioning
-  * **Contribution Verification**: Cryptographic proof of AI training contributions
-  * **Smart Contract Support**: Full EVM compatibility with ONI Token contract
+### World Model (`modules/WorldModel/`)
 
-### **Reinforcement Learning with Human Feedback (RLHF)**
+| Module | Description |
+|--------|-------------|
+| `latent_space_operations.py` | Latent diffusion operations, memory-augmented generation |
+| `world_modeler.py` | Environment state representation |
 
-  * **Multi-Model Support**: Train any ONI model type (NLP, Vision, Audio, Multimodal)
-  * **Advanced PPO Implementation**: Proximal Policy Optimization with clipping and entropy regularization
-  * **Reward Model Training**: Hybrid AI/Human reward models with continuous learning
-  * **Compassion Framework Integration**: Ethical AI training with A, C, S metrics
-  * **Real-time Feedback**: WebSocket-based live feedback collection and processing
+### Additional Components
 
------
+| Directory | Contents |
+|-----------|----------|
+| `modules/haptics/` | Tactile system modeling |
+| `modules/robotics/` | IoT/robot controller interfaces |
+| `modules/skills/` | Dynamic module injection, specialized skills |
+| `modules/feedforward/` | FFN variants including hyper-networks |
 
-## **Applications**
+---
 
-### **Education**
+## Prototype Architectures (`prototypellms/`)
 
-Oni is a revolutionary tool for **personalized education** and **global learning systems**:
+Experimental transformer variants and alternative architectures:
 
-  * **Socratic VR Tutors**: Oni-powered avatars in virtual reality environments can engage students in **Socratic questioning** to promote critical thinking and understanding.
-  * **Immersive Learning**: Virtual classrooms and interactive simulations (e.g., exploring historical events, solving physics problems in a 3D space).
-  * **Personalized Tutoring**: Provide real-time feedback and tailored guidance for students across subjects.
-  * **Interactive Lessons**: Leverage Oni's **text-to-animation** and **voice-to-animation** features to make learning engaging and visually immersive.
-  * **Language Learning**: Multi-lingual conversational agents can teach language and culture interactively in VR environments.
+| File | Description |
+|------|-------------|
+| `HypergraphNLP.py` | Hypergraph-based language model using hyperedge convolutions |
+| `GatedRecurrentTransformer.py` | Transformer with gated recurrence |
+| `KroneckerTransformer.py` | Kronecker-factorized attention |
+| `SudoQuantumMicroTransformer.py` | Quantum-inspired micro-transformer (classical simulation) |
 
-### **Virtual Reality (VR) Integration**
+---
 
-Oni is designed to bring intelligence into **virtual and augmented reality**, creating fully immersive AI-powered experiences:
+## Tools (`tools/`)
 
-  * **Socratic Tutors in VR**: Oni can serve as a virtual mentor, guiding learners in philosophy, science, and critical thinking by asking probing questions and encouraging dialogue.
-  * **Interactive Simulations**: From reconstructing historical events to exploring scientific phenomena, Oni enables dynamic VR-based learning.
-  * **Therapeutic Applications**: Oni-powered agents can guide users in VR for meditation, counseling, or mental health support.
-  * **Creative Sandbox Experiences**: Oni can generate **adaptive VR worlds** based on user input, imagination, and creativity.
-  * **Collaborative VR Spaces**: Oni acts as a facilitator for group learning, brainstorming, or problem-solving sessions in shared virtual environments.
+Integration utilities for external systems:
 
-### **Robotics**
+| Tool | Purpose |
+|------|---------|
+| `RAG.py` | Retrieval-augmented generation with PDF processing |
+| `git_integration.py` | Git repository operations |
+| `playwright_automation.py` | Browser automation |
+| `ros_integration.py` | ROS robotics middleware |
+| `docker_manager.py` | Container orchestration |
+| `blender_controller.py`, `unity_controller.py`, `unreal_controller.py` | 3D engine integration |
+| `navigation.py` | Spatial navigation |
+| `search.py` | Web search utilities |
+| `security_sandboxing.py` | Execution sandboxing |
+| `tool_chaining.py` | Multi-tool workflow orchestration |
 
-Oni can serve as the **brain for robots**, enabling them to perform complex tasks in diverse environments:
+---
 
-  * **Autonomous Workers**: Robotics agents powered by Oni can handle repetitive tasks in industries like manufacturing, logistics, and agriculture.
-  * **Human-Like Interaction**: Robots with emotional and reasoning modules can interact seamlessly with humans in service roles.
-  * **Exploration and Reconnaissance**: Oni-powered robots can act as **autonomous explorers** for scientific missions in extreme environments (e.g., underwater or outer space).
-  * **Coordination and Swarm Robotics**: Enable teams of robots to coordinate efficiently as a single, intelligent entity.
-  * **Adaptive Behavior**: Emotional and homeostatic systems allow robots to adapt to changing conditions and user needs.
+## Training (`trainingLoops/`)
 
-### **Computer-Controlled Agents**
+Example training scripts:
 
-Oni's integration with system-level APIs and automation tools makes it a versatile agent for controlling digital environments:
+- `train_causal_reasoning.py` — Causal reasoning module training with intervention queries
+- `train_analog_reasoning.py` — Analogical reasoning training
+- `train_tactile_system.py` — Haptic system training
 
-  * **Workplace Automation**: Use Oni as an assistant to handle tasks like:
-      * Automating workflows and business processes
-      * Monitoring and managing large-scale systems
-      * Data analysis and report generation
-  * **Cybersecurity and Monitoring**: Oni agents can monitor systems for vulnerabilities, anomalies, and security threats.
-  * **General-Purpose Digital Workers**: From handling repetitive tasks like data entry to **managing complex trading dashboards** for cryptocurrencies or stocks.
-  * **Web Automation**: Browser control, form filling, and web scraping capabilities.
+---
 
-### **Creative and Generative Applications**
+## Agent Workflows (`agentWorkflows/`)
 
-Oni's creativity modules allow for limitless applications in **art, storytelling, and innovation**:
+Minimal agent loop examples:
 
-  * **Text-to-Image and Text-to-Animation**: Create stunning visuals or animations from text prompts using advanced diffusion models.
-  * **Voice-to-Animation**: Generate expressive animations directly from voice inputs.
-  * **Music Generation**: AI-powered music composition and audio synthesis.
-  * **Interactive Storytelling**: Dynamic narrative generation that adapts to user choices and emotional responses.
-  * **Imagination Engine**: Powered by latent diffusion models, enabling abstract creativity and "dreaming."
+- `minimal_recursive_self_directed_loop.py` — Basic autonomous task loop
+- `deep_research.py` — Multi-step research workflow
+- `code_review.py` — Automated code review
+- `github_code_integration.py` — GitHub operations
 
-### **Research and Development**
+---
 
-  * **Scientific Discovery**: Pattern recognition in large datasets, hypothesis generation, and experimental design.
-  * **Code Generation and Analysis**: Advanced programming assistance with multi-language support.
-  * **Document Processing**: Intelligent analysis of PDFs, research papers, and technical documentation.
-  * **Knowledge Synthesis**: Combining information from multiple sources to generate new insights.
+## Domain Applications (`oniapps/`)
 
------
+Specialized application modules (varying completeness):
 
-## **Blockchain Infrastructure**
+- `oni_science_lab.py` — Scientific computation utilities
+- `oni_bioinformatics.py` — Bioinformatics tools
+- `oni_molecular_dynamics.py` — Molecular simulation
+- `oni_quantum_simulator.py` — Quantum circuit simulation
+- `oni_trading_dash.py` — Trading dashboard prototype
 
-### **API Endpoints**
+---
 
-The ONI blockchain exposes the following RESTful API endpoints:
+## Blockchain Components (`chain/`)
 
-  * **GET /health**: Health check endpoint
-  * **GET /balance/{address}**: Get balance for an address
-  * **POST /transactions/new**: Create a new transaction
-  * **POST /transactions/batch**: Process a batch of transactions
-  * **POST /mine**: Mine a new block
-  * **GET /chain**: Get the full blockchain
-  * **GET /transactions/pending**: Get pending transactions
-  * **GET /transaction/{tx\_hash}**: Get transaction details
-  * **GET /models/updates**: Get all model updates
-  * **GET /models/updates/{model\_id}**: Get model updates for a specific model
-  * **GET /models/download/{update\_id}**: Download a model update
-  * **GET /stats**: Get blockchain statistics
-  * **POST /verify**: Verify a proof of compute
-  * **POST /nodes/register**: Register new nodes in the network
-  * **GET /nodes/resolve**: Resolve conflicts between nodes
-  * **GET /gas-price**: Get the current gas price
-  * **POST /estimate-gas**: Estimate gas for a transaction
-  * **POST /proof-of-compute/submit**: Submit proof of compute for a model update
-  * **GET /node/status**: Get node status
+Experimental distributed training infrastructure:
 
-### **Smart Contract Functions**
+- Proof-of-Compute consensus for training contribution tracking
+- Model update versioning
+- Smart contract for contribution rewards (`contracts/ONIToken.sol`)
 
-The ONI Token smart contract provides the following functions:
+**Note:** The blockchain components are in early prototype stage.
 
-  * **recordContribution**: Record a training contribution with proof
-  * **recordFeedback**: Record human feedback for a training session
-  * **startTrainingSession**: Start a new training session
-  * **completeTrainingSession**: Complete a training session
-  * **claimRewards**: Claim accumulated rewards
-  * **processTransaction**: Process a transaction and add it to the current block
-  * **mineBlock**: Mine the current block
-  * **getContributorRewards**: Get contributor's total rewards
-  * **getContributorProofs**: Get all contributions for a contributor
-  * **getSessionFeedback**: Get all feedback for a session
-  * **getTrainingSession**: Get training session details
-  * **getBlock**: Get block details
-  * **getTransaction**: Get transaction details
-  * **getChainStats**: Get chain statistics
+---
 
------
-
-## **Installation**
-
-### **Quick Start**
+## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/ahricat/oni.git
 cd oni
 
-# Run installation script (installs packages from requirements.txt)
-chmod +x scripts/install.sh
-./scripts/install.sh
-
-# Or install Python dependencies manually
-pip install -r requirements.txt
-
-# Activate the environment
-source oni_env/bin/activate
-
-# Start ONI
-python oni_core.py
-```
-
-### **Requirements**
-
-  * Python 3.12 
-  * CUDA-compatible GPU 3080ti or higher, training requires 10 3090s or more (recommended)
-  * 48GB+ RAM
-  * 100GB+ storage for models and data
-
-### **Blockchain Node Setup**
-
-```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start the blockchain node
-python -m chain.oni_blockchain_api
+# Or use the install script
+chmod +x scripts/install.sh
+./scripts/install.sh
 ```
 
-### **Smart Contract Deployment**
+### Requirements
 
-```bash
-# Install Node.js dependencies
-npm install
+- Python 3.12+
+- PyTorch with CUDA support (recommended)
+- 16GB+ RAM (48GB+ for full system)
+- See `requirements.txt` for package dependencies
 
-# Deploy the ONI Token contract
-npx hardhat run scripts/deploy.js --network oni
+---
+
+## Usage Examples
+
+The `usage/` directory contains integration examples:
+
+- `TkinterChat.ipynb` — Simple chat interface
+- `roboticsController.py` — Robot control example
+- `oni_VRCNPC.cs` — Unity VR NPC integration
+- `unrealNPC.cpp` — Unreal Engine NPC
+
+---
+
+## Project Structure
+
 ```
-
------
-
-## **Development and Contribution**
-
-### **Project Structure**
-
-```
-Oni-Public/
-├── all-in-one-versions/
-├── constants/
-├── frontend/ 
-├── modules/           # Core AI modules
+ONI/
+├── modules/           # Core neural modules
+│   ├── memory/        # Memory systems
+│   ├── NLP/           # Reasoning & language
+│   ├── attention/     # Attention mechanisms
+│   ├── emotion/       # Affective modeling
+│   ├── vision/        # Visual processing
+│   ├── audio/         # Audio processing
+│   ├── dynamics/      # Dynamic layers
+│   ├── WorldModel/    # World modeling
+│   ├── haptics/       # Tactile systems
+│   ├── robotics/      # Robot interfaces
+│   └── skills/        # Skill modules
+├── prototypellms/     # Experimental architectures
+├── tools/             # External integrations
+├── oniapps/           # Domain applications
 ├── chain/             # Blockchain components
-├── rlhf/              # Reinforcement learning with human feedback
-├── oniapps/           # External tool integrations
-├── tools/             # Creative tools and utilities
-├── config/            # Configuration files
-├── tests/             # Unit and integration tests
-├── scripts/           # Utility scripts
-├── contracts/         # Smart contracts
-├── Oni.py
-└── usage/             # Example implementations
+├── trainingLoops/     # Training scripts
+├── agentWorkflows/    # Agent examples
+├── tests/             # Test suite
+├── usage/             # Usage examples
+├── frontend/          # Web interface
+└── scripts/           # Utility scripts
 ```
 
-### **Contributing**
+---
 
-1.  Fork the repository
-2.  Create a feature branch
-3.  Implement your changes with tests
-4.  Submit a pull request
+## Current Status & Limitations
 
-### **Testing**
+ONI is research software with the following caveats:
 
-```bash
-# Run all tests
-./scripts/run_tests.sh
+- **Varying maturity:** Some modules are well-tested, others are stubs or prototypes
+- **Integration gaps:** Not all modules compose seamlessly
+- **Documentation:** Inline documentation varies; some modules need more explanation
+- **Performance:** Not optimized for production deployment
+- **Dependencies:** Some modules have specific hardware requirements
+- **examples of composition** see oni.py or all in one models folder to see how you may compose your own onis. 
 
-# Run specific module tests
-python -m pytest tests/test_oni_core.py -v
+---
 
-# Test smart contracts
-npx hardhat test
-```
+## Contributing
 
------
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Submit a pull request
 
-## **License**
+---
 
-This project is licensed under the Pantheum License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
+## License
 
-**Important**: This software is provided for research and educational purposes. Users must adhere to ethical guidelines and are responsible for ensuring beneficial use of the technology.
+Pantheum License — see `LICENSE` for terms. Research and educational use; users are responsible for ethical application.
 
------
+---
 
-## **Community and Support**
+## Acknowledgments
 
-  * **Documentation**: [Full documentation](https://www.google.com/search?q=docs/)
-  * **Discord**: [Join our community](https://discord.gg/oni-agi)
-  * **Issues**: [Report bugs and request features](https://github.com/ahricat/oni/issues)
-  * **Discussions**: [Community discussions](https://github.com/ahricat/oni/discussions)
-
------
-
-**ONI represents the next evolution in artificial intelligence - a system that doesn't just process information, but truly understands, feels, and acts with wisdom and compassion. Join us in building the future of beneficial AGI.**
+ONI draws inspiration from cognitive architecture research, including work on memory consolidation, metacognition, and multi-agent coordination. The compassion framework builds on ideas from AI safety research around value alignment and multi-stakeholder optimization.
