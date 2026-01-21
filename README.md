@@ -44,7 +44,7 @@ Reasoning modules explore different approaches to structured inference:
 
 | Module | Description |
 |--------|-------------|
-| `oni_metacognition.py` | Self-monitoring, abductive reasoning, hypothesis generation |
+| `oni_metacognition.py` | metathinking, abductive reasoning, hypothesis generation |
 | `causal_reasoning.py` | Causal graph construction and intervention modeling |
 | `analogical_reasoning.py` | Cross-domain analogical mapping |
 | `counterfactual_reasoning.py` | "What if" scenario evaluation |
@@ -119,8 +119,8 @@ Experimental transformer variants and alternative architectures:
 | File | Description |
 |------|-------------|
 | `HypergraphNLP.py` | Hypergraph-based language model using hyperedge convolutions |
-| `GatedRecurrentTransformer.py` | Transformer with gated recurrence |
-| `KroneckerTransformer.py` | Kronecker-factorized attention |
+| `GatedRecurrentTransformer.py` | Transformer with gated rnn |
+| `KroneckerTransformer.py` | to be used in donut -> kronecker transform for cycloidal positional bias model with ternary tokenizer |
 | `SudoQuantumMicroTransformer.py` | Quantum-inspired micro-transformer (classical simulation) |
 
 ---
