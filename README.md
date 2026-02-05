@@ -6,16 +6,14 @@ ONI is a **modular repository of neural network components** designed to support
 
 ---
 
-## What ONI Actually Is
-
-ONI provides:
+### ONI provides:
 
 - **Reusable neural modules** for memory systems, attention mechanisms, reasoning components, and multimodal processing
 - **Reference implementations** of concepts from cognitive architecture research
 - **Integration scaffolding** for combining modules into larger systems
 - **Training utilities** and example workflows
 
-ONI is *not* a complete AI system you can deploy. It's a component library and research codebase.
+
 
 ---
 
