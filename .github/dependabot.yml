@@ -1,11 +1,70 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# .github/dependabot.yml
+# ---------------------------------------------------------
+# Dependabot configuration – multi‑ecosystem group
+# ---------------------------------------------------------
 version: 2
+
+# ------------------------------------------------------------------
+# 1️⃣  Python (pip) – 90 % of the codebase
+# ------------------------------------------------------------------
 updates:
-  - package-ecosystem: "pip", # See documentation for possible values
-    directory: "/oni" # Location of package manifests
+  - package-ecosystem: "pip"                     # Python packages (requirements.txt, Pipfile, pyproject.toml)
+    directory: "/"                               # Root of the repository – adjust if you keep deps elsewhere
+    schedule:
+      interval: "daily"                          # Check for updates every day
+      time: "04:00"                              # Optional – run at 4 am UTC
+    open-pull-requests-limit: 5
+    groups:
+      # All Python updates will be combined with the other ecosystems
+      multi-ecosystem:
+        patterns:
+          - "*"                                 # Match every Python dependency
+
+# ------------------------------------------------------------------
+# 2️⃣  Node.js (npm) – TypeScript, JavaScript, Solidity (npm‑based tooling)
+# ------------------------------------------------------------------
+  - package-ecosystem: "npm"                     # npm / Yarn / pnpm lockfiles
+    directory: "/"                               # Adjust if you keep a separate “frontend/” folder
+    schedule:
+      interval: "daily"
+      time: "04:30"
+    open-pull-requests-limit: 5
+    groups:
+      multi-ecosystem:
+        patterns:
+          - "*"                                 # Match every npm dependency
+
+# ------------------------------------------------------------------
+# 3️⃣  GitHub Actions – workflows used by Jupyter notebooks, CI, etc.
+# ------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"                               # Looks for .github/workflows/*.yml
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "05:00"
+    open-pull-requests-limit: 3
+    groups:
+      multi-ecosystem:
+        patterns:
+          - "*"                                 # Match every GH‑Actions version bump
+
+# ------------------------------------------------------------------
+# Optional: Add a generic “Other” catch‑all for any future ecosystem
+# ------------------------------------------------------------------
+  - package-ecosystem: "bundler"                 # Example for Ruby gems – remove if you don’t use it
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    groups:
+      multi-ecosystem:
+        patterns:
+          - "*"                                 # Keeps the group universal
+
+# ------------------------------------------------------------------
+# Global settings (apply to every update block)
+# ------------------------------------------------------------------
+registries: {}          # Add private registries here if needed
+allow:
+  - dependency-type: "all"   # Accept both direct & transitive updates
