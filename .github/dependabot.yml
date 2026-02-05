@@ -9,7 +9,7 @@ version: 2
 # ------------------------------------------------------------------
 updates:
   - package-ecosystem: "pip"                     # Python packages (requirements.txt, Pipfile, pyproject.toml)
-    directory: "/"                               # Root of the repository – adjust if you keep deps elsewhere
+    directory: "oni/"                               # Root of the repository – adjust if you keep deps elsewhere
     schedule:
       interval: "daily"                          # Check for updates every day
       time: "04:00"                              # Optional – run at 4 am UTC
@@ -24,7 +24,7 @@ updates:
 # 2️⃣  Node.js (npm) – TypeScript, JavaScript, Solidity (npm‑based tooling)
 # ------------------------------------------------------------------
   - package-ecosystem: "npm"                     # npm / Yarn / pnpm lockfiles
-    directory: "/"                               # Adjust if you keep a separate “frontend/” folder
+    directory: "oni/"                               # Adjust if you keep a separate “frontend/” folder
     schedule:
       interval: "daily"
       time: "04:30"
@@ -38,7 +38,7 @@ updates:
 # 3️⃣  GitHub Actions – workflows used by Jupyter notebooks, CI, etc.
 # ------------------------------------------------------------------
   - package-ecosystem: "github-actions"
-    directory: "/"                               # Looks for .github/workflows/*.yml
+    directory: "oni/"                               # Looks for .github/workflows/*.yml
     schedule:
       interval: "weekly"
       day: "monday"
@@ -53,7 +53,7 @@ updates:
 # Optional: Add a generic “Other” catch‑all for any future ecosystem
 # ------------------------------------------------------------------
   - package-ecosystem: "bundler"                 # Example for Ruby gems – remove if you don’t use it
-    directory: "/"
+    directory: "oni/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 2
