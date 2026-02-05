@@ -8,23 +8,22 @@ version: 2
 # 1️⃣  Python (pip) – 90 % of the codebase
 # ------------------------------------------------------------------
 updates:
-  - package-ecosystem: "pip"                     # Python packages (requirements.txt, Pipfile, pyproject.toml)
-    directory: "oni/"                               # Root of the repository – adjust if you keep deps elsewhere
+  - package-ecosystem: "pip"                     
+    directory: "oni/"                              
     schedule:
-      interval: "daily"                          # Check for updates every day
-      time: "04:00"                              # Optional – run at 4 am UTC
+      interval: "daily"                        
+      time: "04:00"                             
     open-pull-requests-limit: 5
     groups:
-      # All Python updates will be combined with the other ecosystems
+     
       multi-ecosystem:
         patterns:
-          - "*"                                 # Match every Python dependency
-
+          - "*"                            
 # ------------------------------------------------------------------
 # 2️⃣  Node.js (npm) – TypeScript, JavaScript, Solidity (npm‑based tooling)
 # ------------------------------------------------------------------
   - package-ecosystem: "npm"                     # npm / Yarn / pnpm lockfiles
-    directory: "oni/"                               # Adjust if you keep a separate “frontend/” folder
+    directory: "oni/"                              
     schedule:
       interval: "daily"
       time: "04:30"
@@ -47,12 +46,12 @@ updates:
     groups:
       multi-ecosystem:
         patterns:
-          - "*"                                 # Match every GH‑Actions version bump
+          - "*"                               
 
 # ------------------------------------------------------------------
 # Optional: Add a generic “Other” catch‑all for any future ecosystem
 # ------------------------------------------------------------------
-  - package-ecosystem: "bundler"                 # Example for Ruby gems – remove if you don’t use it
+  - package-ecosystem: "bundler"               
     directory: "oni/"
     schedule:
       interval: "weekly"
@@ -60,7 +59,7 @@ updates:
     groups:
       multi-ecosystem:
         patterns:
-          - "*"                                 # Keeps the group universal
+          - "*"                                
 
 # ------------------------------------------------------------------
 # Global settings (apply to every update block)
