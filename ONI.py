@@ -466,24 +466,6 @@ class Planner:
             return [high_level_step]
 
 
-# === Integration helpers to add into OniMicro ===
-# Insert the following inside OniMicro.__init__ after self.rules (or near other initializations)
-# Minimal, safe compressor wrapper that uses nlp_module.generate, truncated
-def _nlp_compressor_wrapper(nlp_mod, max_out_tokens=256):
-    def compressor(text, max_tokens=max_out_tokens):
-        try:
-            out = nlp_mod.generate(f"Summarize briefly for agent context (max tokens {max_tokens}):\n\n{text}")
-            return out[:max_tokens]
-        except Exception:
-            # Last-resort short return
-            return text[:max_tokens]
-    return compressor
-
-# Example: in OniMicro.__init__ add:
-# self.memory_manager = MemoryManager(compressor=_nlp_compressor_wrapper(self.nlp_module))
-# self.planner = Planner(self.nlp_module)
-# self.task_manifests = {...}  (see below)
-# self.rules = Rules(self)  (if not already added)
 
 # === Minimal example of task_manifests you can drop into OniMicro.__init__ ===
 """
@@ -499,91 +481,7 @@ self.task_manifests = {
 }
 """
 
-# === spawn_micro_agent and step methods to add to OniMicro ===
-def spawn_micro_agent(self, task_name: str, goal: str = None, global_state: dict = None):
-    """
-    Build micro-agent by:
-     - selecting modules from manifest (by attribute name)
-     - asking MemoryManager for minimal context slices for streams listed
-     - bundling these as local_state
-    """
-    if task_name not in self.task_manifests:
-        raise KeyError(f"Unknown microtask {task_name}")
 
-    mf = self.task_manifests[task_name]
-    modules = {}
-    for m in mf.get("modules", []):
-        modules[m] = getattr(self, m, None)
-    # Build local_state using compacted stream contexts
-    local_state = {}
-    streams = mf.get("streams", [])
-    for s in streams:
-        local_state[s + "_context"] = self.memory_manager.compact_context(s, max_tokens=256)
-    # include any provided small slice of global_state
-    if global_state:
-        local_state["global_slice"] = {k: global_state.get(k) for k in mf.get("state_fields", [])}
-    rule = mf["rule"]
-    return MicroAgent(modules, local_state, rule, goal)
-
-def planner_decompose(self, user_goal: str, global_state: dict = None, lookback_streams=None):
-    """
-    Use main LLM planner to produce a short hierarchy of subtasks.
-    Returns: list of atomic subtask strings.
-    """
-    # Build memory context from important streams
-    if lookback_streams is None:
-        lookback_streams = ["text", "vision", "audio", "internal"]
-    memory_context = self.memory_manager.merge_streams_context(lookback_streams, max_tokens=512)
-    high_level = self.planner.plan_bigger_picture(user_goal, memory_context)
-    # High-level may be list -> decompose each
-    atomic = []
-    for step in high_level:
-        small = self.planner.decompose_task(step, constraint_instructions="Produce minimal atomic subtasks; annotate sensor streams if possible.")
-        atomic.extend(small)
-    return atomic
-
-def step(self, user_goal: str = None, global_state: dict = None):
-    """
-    One meta-step: planner -> spawn micro-agents -> run them -> apply deltas.
-    Returns dict task_name -> delta.
-    """
-    # 1) planner produces atomic list
-    atomic_subtasks = self.planner_decompose(user_goal, global_state) if hasattr(self, 'planner_decompose') else self.planner.decompose_task(user_goal)
-    outputs = {}
-    for i, sub in enumerate(atomic_subtasks):
-        # heuristics: map subtask string to manifest key (or use an NLP mapping)
-        # naive mapping: look for keywords
-        key = None
-        s = sub.lower()
-        if "vision" in s or "see" in s or "screen" in s:
-            key = "vision_step"
-        elif "audio" in s or "listen" in s:
-            key = "audio_step"
-        elif "memory" in s or "write" in s:
-            key = "memory_write"
-        elif "q_update" in s or "q-" in s or "value" in s:
-            key = "q_update"
-        elif "homeostatic" in s or "energy" in s:
-            key = "homeostasis_step"
-        else:
-            # default to nlp_step for opaque subtasks
-            key = "nlp_step"
-
-        micro = self.spawn_micro_agent(key, goal=sub, global_state=global_state)
-        try:
-            delta = micro.run()
-        except Exception as e:
-            delta = {"error": f"micro-run failed: {e}"}
-        outputs[f"{i}:{sub}"] = delta
-        # Push a tiny record of execution into memory manager for the streams
-        # store the subtask string as a short event in internal stream
-        try:
-            self.memory_manager.push("internal", f"executed:{sub}")
-        except Exception:
-            pass
-    return outputs
-
-# === End of patch ===
 
 class OniMicro(nn.Module):
     def __init__(self, tokenizer, input_dim, hidden_dim, output_dim, nhead, num_layers, exec_func, state_size, action_size, learning_rate=0.002, discount_factor=0.98, exploration_rate=1.0, exploration_decay=0.995, target_update=10, device=device):
@@ -700,7 +598,7 @@ class OniMicro(nn.Module):
 
         self.toolregistry.__init__
         self.toolinterface.__init__
-        
+        self.agent = self.spawn_micro_agent(self, task_name: str = None, goal: str = None, global_state: dict = None)
     def add_tool(tool):
         tool = self.toolregistry.__new__(tool)
         self.toolregistry.register_tool(tool)
@@ -1748,3 +1646,97 @@ class OniMicro(nn.Module):
                       print(output.shape)
                   else:
                      print(output)
+
+# === spawn_micro_agent and step methods to add to OniMicro ===
+     def spawn_micro_agent(self, task_name: str, goal: str = None, global_state: dict = None):
+            """
+            Build micro-agent by:
+             - selecting modules from manifest (by attribute name)
+             - asking MemoryManager for minimal context slices for streams listed
+             - bundling these as local_state
+            """
+            if task_name not in self.task_manifests:
+                raise KeyError(f"Unknown microtask {task_name}")
+        
+            mf = self.task_manifests[task_name]
+            modules = {}
+            for m in mf.get("modules", []):
+                modules[m] = getattr(self, m, None)
+            # Build local_state using compacted stream contexts
+            local_state = {}
+            streams = mf.get("streams", [])
+            for s in streams:
+                local_state[s + "_context"] = self.memory_manager.compact_context(s, max_tokens=256)
+            # include any provided small slice of global_state
+            if global_state:
+                local_state["global_slice"] = {k: global_state.get(k) for k in mf.get("state_fields", [])}
+            rule = mf["rule"]
+            return MicroAgent(modules, local_state, rule, goal)
+
+    def planner_decompose(self, user_goal: str, global_state: dict = None, lookback_streams=None):
+        """
+        Use main LLM planner to produce a short hierarchy of subtasks.
+        Returns: list of atomic subtask strings.
+        """
+        # Build memory context from important streams
+        if lookback_streams is None:
+            lookback_streams = ["text", "vision", "audio", "internal"]
+        memory_context = self.memory_manager.merge_streams_context(lookback_streams, max_tokens=512)
+        high_level = self.planner.plan_bigger_picture(user_goal, memory_context)
+        # High-level may be list -> decompose each
+        atomic = []
+        for step in high_level:
+            small = self.planner.decompose_task(step, constraint_instructions="Produce minimal atomic subtasks; annotate sensor streams if possible.")
+            atomic.extend(small)
+        return atomic
+
+    def step(self, user_goal: str = None, global_state: dict = None):
+        """
+        One meta-step: planner -> spawn micro-agents -> run them -> apply deltas.
+        Returns dict task_name -> delta.
+        """
+        # 1) planner produces atomic list
+        atomic_subtasks = self.planner_decompose(user_goal, global_state) if hasattr(self, 'planner_decompose') else self.planner.decompose_task(user_goal)
+        outputs = {}
+        for i, sub in enumerate(atomic_subtasks):
+            # heuristics: map subtask string to manifest key (or use an NLP mapping)
+            # naive mapping: look for keywords
+            key = None
+            s = sub.lower()
+            if "vision" in s or "see" in s or "screen" in s:
+                key = "vision_step"
+            elif "audio" in s or "listen" in s:
+                key = "audio_step"
+            elif "memory" in s or "write" in s:
+                key = "memory_write"
+            elif "q_update" in s or "q-" in s or "value" in s:
+                key = "q_update"
+            elif "homeostatic" in s or "energy" in s:
+                key = "homeostasis_step"
+            else:
+                # default to nlp_step for opaque subtasks
+                key = "nlp_step"
+    
+            micro = self.spawn_micro_agent(key, goal=sub, global_state=global_state)
+            try:
+                delta = micro.run()
+            except Exception as e:
+                delta = {"error": f"micro-run failed: {e}"}
+            outputs[f"{i}:{sub}"] = delta
+            # Push a tiny record of execution into memory manager for the streams
+            # store the subtask string as a short event in internal stream
+            try:
+                self.memory_manager.push("internal", f"executed:{sub}")
+            except Exception:
+                pass
+        return outputs
+
+    def _nlp_compressor_wrapper(nlp_mod, max_out_tokens=256):
+        def compressor(text, max_tokens=max_out_tokens):
+            try:
+                out = nlp_mod.generate(f"Summarize briefly for agent context (max tokens {max_tokens}):\n\n{text}")
+                return out[:max_tokens]
+            except Exception:
+                # Last-resort short return
+                return text[:max_tokens]
+        return compressor
