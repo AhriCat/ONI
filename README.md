@@ -276,7 +276,7 @@ ONI is research software with the following caveats:
 ## License
 
 Pantheum License — see `LICENSE` for terms. Research and educational use; users are responsible for ethical application.
-
+PS sorry for any past posts being disengenuous seeming and the website. Some of it was very enthusiastic thinking others are still in the works as later plans or unreleased models. 
 ---
 
 ## Acknowledgments
