@@ -797,5 +797,80 @@ class MetaCognitionModule(nn.Module):
                 ] if conflicts else []
             }
         }
-        
+
         return explanation
+
+    def diagnose_self(self, task_input: torch.Tensor, task_output: torch.Tensor,
+                      expected_output: Optional[torch.Tensor] = None,
+                      task_id: str = "unknown") -> Dict[str, Any]:
+        """
+        Self-referential diagnosis: use ONI's own metacognition to identify
+        what went wrong on a specific task.
+
+        [EDITOR] This is the key method the evolution system calls. It wraps
+        explain_reasoning() with error-signal analysis to produce actionable
+        improvement proposals.
+
+        Args:
+            task_input: The input tensor that was fed to ONI
+            task_output: ONI's actual output on the task
+            expected_output: Ground-truth output (if available)
+            task_id: Identifier for logging
+
+        Returns:
+            diagnosis: Dict with keys:
+                - 'explanation': full explain_reasoning output
+                - 'error_signal': dict with loss, gradient_norm if expected available
+                - 'weakness_indicators': list of (indicator_name, severity) tuples
+                - 'task_id': pass-through
+        """
+        # Get metacognitive explanation
+        explanation = self.explain_reasoning(task_input)
+
+        # Compute error signal if we have ground truth
+        error_signal = {}
+        if expected_output is not None:
+            with torch.no_grad():
+                mse = F.mse_loss(task_output, expected_output).item()
+                cosine_sim = F.cosine_similarity(
+                    task_output.flatten().unsqueeze(0),
+                    expected_output.flatten().unsqueeze(0)
+                ).item()
+            error_signal = {
+                'mse': mse,
+                'cosine_similarity': cosine_sim,
+                'magnitude_ratio': (
+                    task_output.norm().item() /
+                    max(expected_output.norm().item(), 1e-8)
+                )
+            }
+
+        # Extract weakness indicators from metacognitive state
+        weakness_indicators = []
+
+        epistemic = explanation['uncertainty']['epistemic']
+        aleatoric = explanation['uncertainty']['aleatoric']
+        confidence = explanation['confidence']['score']
+
+        if epistemic > 0.7:
+            weakness_indicators.append(('high_epistemic_uncertainty', epistemic))
+        if aleatoric > 0.7:
+            weakness_indicators.append(('high_aleatoric_uncertainty', aleatoric))
+        if confidence < 0.3:
+            weakness_indicators.append(('low_confidence', 1.0 - confidence))
+        if explanation['conflicts']['detected']:
+            worst_conflict = max(
+                explanation['conflicts']['detected'],
+                key=lambda c: c['score']
+            )
+            weakness_indicators.append(('principle_conflict', worst_conflict['score']))
+
+        # Sort by severity descending
+        weakness_indicators.sort(key=lambda x: x[1], reverse=True)
+
+        return {
+            'explanation': explanation,
+            'error_signal': error_signal,
+            'weakness_indicators': weakness_indicators,
+            'task_id': task_id
+        }
