@@ -42,7 +42,7 @@ Reasoning modules explore different approaches to structured inference:
 
 | Module | Description |
 |--------|-------------|
-| `oni_metacognition.py` | metathinking, abductive reasoning, hypothesis generation |
+| `oni_metacognition.py` | Self-reflection, abductive/analogical/causal reasoning, hypothesis generation, confidence estimation, `diagnose_self()` for evolution |
 | `causal_reasoning.py` | Causal graph construction and intervention modeling |
 | `analogical_reasoning.py` | Cross-domain analogical mapping |
 | `counterfactual_reasoning.py` | "What if" scenario evaluation |
@@ -142,13 +142,80 @@ Integration utilities for external systems:
 
 ---
 
+## Evolution System (`evolution/`) — ONI-DGM
+
+ONI includes a **Darwin-Gödel Machine**-style self-improvement loop that uses ONI's own metacognition to identify weaknesses and apply targeted GRPO training via the [Superintelligence Oven](https://github.com/AhriCat/super_intelligence_oven).
+
+**Key differentiator from vanilla DGM:** instead of an external model diagnosing failures, ONI diagnoses itself. As ONI improves, its diagnosis improves — a virtuous cycle.
+
+### Architecture
+
+```
+evaluate → self-diagnose (metacognition) → propose → train (Oven GRPO) → re-evaluate → archive
+```
+
+Parent selection follows DGM's sigmoid-child-proportional algorithm:
+```
+P(parent_i) = sigmoid(score_i) × 1/(1 + children_i) / Z
+```
+
+### Components
+
+| File | Purpose |
+|------|---------|
+| `oni_dgm_outer.py` | Main `ONIDarwinGodelMachine` orchestrator |
+| `oni_self_diagnosis.py` | Self-referential diagnosis via `MetaCognitionModule.diagnose_self()` |
+| `oni_archive.py` | DGM-style variant archive with open-ended exploration |
+| `oni_oven_integration.py` | Wraps `superintelligence_oven.bake()` for GRPO; mock SGD fallback |
+| `oni_evaluation.py` | Multi-modal weighted evaluator (NLP 30%, Vision 20%, Audio 15%, …) |
+| `oni_robotics_trainer.py` | Diffusion trajectory generation with smoothness/haptic metrics |
+| `improvement_proposal.py` | `ImprovementProposal`, `EvaluationLog`, `ONIVariant` data structures |
+| `config.py` | All hyperparameters in one place |
+| `monitor.py` | CLI progress reporter |
+| `utils/` | Parent selection, weight patch, benchmark helpers |
+| `tests/` | 11 tests covering diagnosis, archive, and parent selection |
+
+### Quick start
+
+```bash
+# Test mode — no GPU or model weights required
+python -m trainingLoops.train_evolution \
+    --archive_dir ./oni_archive \
+    --max_generations 5 \
+    --verbose
+
+# Full evolution with real model and Oven
+pip install -e ../super_intelligence_oven
+python -m trainingLoops.train_evolution \
+    --archive_dir ./oni_archive \
+    --initial_variant ./ \
+    --model_path ./weights/oni_v1.pt \
+    --max_generations 80
+
+# Monitor progress
+python -m evolution.monitor ./oni_archive
+```
+
+### Oven integration
+
+The Superintelligence Oven provides the GRPO training back-end with:
+- Hot-swappable local teachers (Qwen3-4B, Qwen3-8B-Q4, diffusion motion)
+- Remote agent swarm (critic / adversary / specialist / style / curriculum)
+- QwenEmbedVerifier semantic reward (text modalities)
+- Per-module teacher routing (`ModuleType.ROBOTICS` → diffusion teacher, `ModuleType.METACOGNITION` → big teacher, etc.)
+
+When the oven is not installed, the integration falls back to a mock 10-step SGD pass so the full evolution loop can be validated without external dependencies.
+
+---
+
 ## Training (`trainingLoops/`)
 
-Example training scripts:
-
-- `train_causal_reasoning.py` — Causal reasoning module training with intervention queries
-- `train_analog_reasoning.py` — Analogical reasoning training
-- `train_tactile_system.py` — Haptic system training
+| Script | Purpose |
+|--------|---------|
+| `train_evolution.py` | **ONI-DGM evolution entrypoint** — full self-improvement loop |
+| `train_causal_reasoning.py` | Causal reasoning module training with intervention queries |
+| `train_analog_reasoning.py` | Analogical reasoning training |
+| `train_tactile_system.py` | Haptic system training |
 
 ---
 
@@ -183,7 +250,7 @@ Experimental distributed training infrastructure:
 - Model update versioning
 - Smart contract for contribution rewards (`contracts/ONIToken.sol`)
 
-**Note:** The blockchain components are in early prototype stage.
+> **Important:** The blockchain components are a **research prototype** simulating proof-of-compute and ledger concepts for AI training coordination. They do **not** deploy real smart contracts to any live network and do **not** handle real cryptocurrency or tokens of monetary value. The Solidity contract and Python simulation classes are reference implementations only. Do not use in production financial or governance systems without a full security audit.
 
 ---
 
@@ -225,28 +292,43 @@ The `usage/` directory contains integration examples:
 
 ```
 ONI/
-├── modules/           # Core neural modules
-│   ├── memory/        # Memory systems
-│   ├── NLP/           # Reasoning & language
-│   ├── attention/     # Attention mechanisms
-│   ├── emotion/       # Affective modeling
-│   ├── vision/        # Visual processing
-│   ├── audio/         # Audio processing
-│   ├── dynamics/      # Dynamic layers
-│   ├── WorldModel/    # World modeling
-│   ├── haptics/       # Tactile systems
-│   ├── robotics/      # Robot interfaces
-│   └── skills/        # Skill modules
-├── prototypellms/     # Experimental architectures
-├── tools/             # External integrations
-├── oniapps/           # Domain applications
-├── chain/             # Blockchain components
-├── trainingLoops/     # Training scripts
-├── agentWorkflows/    # Agent examples
-├── tests/             # Test suite
-├── usage/             # Usage examples
-├── frontend/          # Web interface
-└── scripts/           # Utility scripts
+├── ONI.py                 # Main model (composes all modules)
+├── modules/               # Core neural modules
+│   ├── oni_metacognition.py  # Re-export shim (fixes import path)
+│   ├── memory/            # Memory systems
+│   ├── NLP/               # Reasoning & language (metacognition lives here)
+│   ├── attention/         # Attention mechanisms
+│   ├── emotion/           # Affective modeling
+│   ├── vision/            # Visual processing
+│   ├── audio/             # Audio processing
+│   ├── dynamics/          # Dynamic layers
+│   ├── WorldModel/        # World modeling
+│   ├── haptics/           # Tactile systems
+│   ├── robotics/          # Robot interfaces
+│   └── skills/            # Skill modules
+├── evolution/             # ONI-DGM self-improvement system
+│   ├── oni_dgm_outer.py   # Main evolution orchestrator
+│   ├── oni_self_diagnosis.py
+│   ├── oni_archive.py
+│   ├── oni_oven_integration.py
+│   ├── oni_evaluation.py
+│   ├── oni_robotics_trainer.py
+│   ├── improvement_proposal.py
+│   ├── config.py
+│   ├── monitor.py
+│   ├── utils/
+│   └── tests/
+├── prototypellms/         # Experimental architectures
+├── tools/                 # External integrations
+├── oniapps/               # Domain applications
+├── chain/                 # Blockchain prototype (research only)
+├── trainingLoops/         # Training scripts incl. train_evolution.py
+├── agentWorkflows/        # Agent examples
+├── evaluation/            # Module fitness evaluation
+├── tests/                 # Test suite
+├── usage/                 # Usage examples
+├── frontend/              # Web interface
+└── scripts/               # Utility scripts
 ```
 
 ---
