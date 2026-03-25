@@ -698,10 +698,11 @@ class OniMicro(nn.Module):
 
         try:
             # Meta-cognitive processing
-            meta_output, confidence, conflicts = self.metacognition_module(adjusted_output)
+            # [EDITOR] MetaCognitionModule.forward() returns 4 values, not 3
+            meta_output, confidence, conflicts, meta_metadata = self.metacognition_module(adjusted_output)
         except Exception as e:
             print(f"Error in Meta-cognition module: {e}")
-            meta_output, confidence, conflicts = adjusted_output, 0.5, []
+            meta_output, confidence, conflicts, meta_metadata = adjusted_output, 0.5, [], {}
 
         try:
             # Final output layer
@@ -871,7 +872,8 @@ class OniMicro(nn.Module):
             if key in task_description.lower():
                 try:
                     # Process through meta-cognition first
-                    meta_output, confidence, conflicts = self.metacognition_module(torch.randn(1, 896))
+                    # [EDITOR] MetaCognitionModule.forward() returns 4 values, not 3
+                    meta_output, confidence, conflicts, meta_metadata = self.metacognition_module(torch.randn(1, 896))
                     
                     if confidence > 0.5 and not conflicts:
                         task_fn()
@@ -1470,8 +1472,9 @@ class OniMicro(nn.Module):
             compassion_result = self.compassion_system.plan_compassionate_action("user")
             
             # Process through meta-cognition
-            meta_output, confidence, conflicts = self.metacognition_module(torch.randn(1, 896))
-            
+            # [EDITOR] MetaCognitionModule.forward() returns 4 values, not 3
+            meta_output, confidence, conflicts, meta_metadata = self.metacognition_module(torch.randn(1, 896))
+
             if confidence > 0.7 and not conflicts and compassion_result:
                 # Attempt processing with the primary NLP
                 response = self.nlp_module.generate(input_text)

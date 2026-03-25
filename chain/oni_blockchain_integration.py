@@ -1,3 +1,17 @@
+# ==============================================================================
+# DISCLAIMER: RESEARCH / PROTOTYPE IMPLEMENTATION — NOT PRODUCTION SMART CONTRACTS
+# ==============================================================================
+# The blockchain implementation in this directory (chain/) is a RESEARCH PROTOTYPE
+# simulating proof-of-compute and distributed ledger concepts for AI training
+# coordination. It does NOT deploy real smart contracts to any live blockchain
+# network and does NOT handle real cryptocurrency or tokens of monetary value.
+#
+# The Solidity contract in chain/oni_smart_contract.sol and the Python simulation
+# classes are reference implementations for the architectural concept only.
+# Do NOT use this code in production financial or governance systems without a
+# full security audit and proper smart-contract deployment pipeline.
+# ==============================================================================
+
 import os
 import json
 import hashlib
