@@ -1,3 +1,6 @@
+from typing import Dict, Optional, Tuple
+
+
 class SpatialMemoryModule:
     def __init__(self, room_size: Tuple[int, int], overlap: float = 0.2, max_memory: int = 100):
         """

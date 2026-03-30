@@ -228,9 +228,6 @@ class MiniVisionTransformer(nn.Module):
         else:
             raise IndexError("Pointer position is out of bounds.")
 
-# Example instantiation
-num_classes = 1000  # Example for image classification
-
 class MiniVisionTransformerWithIO(MiniVisionTransformer):
     def __init__(self, *args, **kwargs):
         super(MiniVisionTransformerWithIO, self).__init__(*args, **kwargs)
@@ -326,19 +323,15 @@ class MiniVisionTransformerWithIO(MiniVisionTransformer):
             print(f"Error in process_input: {e}")
             return None
 
-# Example Usage
-vision_system = MiniVisionTransformerWithIO(3, 64, 256, exec_func=None, num_transformer_layers=6, nhead=8, num_classes=1000)
+if __name__ == '__main__':
+    # Example Usage
+    vision_system = MiniVisionTransformerWithIO(3, 64, 256, exec_func=None, num_transformer_layers=6, nhead=8, num_classes=1000)
 
-# Process screen
-screen_output = vision_system.process_input(input_type='screen')
+    screen_output = vision_system.process_input(input_type='screen')
+    camera_output = vision_system.process_input(input_type='camera', camera_indices=[0])
+    multi_camera_output = vision_system.process_input(input_type='cameras', camera_indices=[0, 1])
 
-# Process single camera
-camera_output = vision_system.process_input(input_type='camera', camera_indices=[0])
-
-# Process multiple cameras
-multi_camera_output = vision_system.process_input(input_type='cameras', camera_indices=[0, 1])
-
-print(f"Screen Output: {screen_output}")
-print(f"Camera Output: {camera_output}")
-print(f"Multi-Camera Output: {multi_camera_output}")
+    print(f"Screen Output: {screen_output}")
+    print(f"Camera Output: {camera_output}")
+    print(f"Multi-Camera Output: {multi_camera_output}")
 

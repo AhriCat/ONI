@@ -1,3 +1,7 @@
+import time
+from typing import Any, Dict, Tuple
+
+
 class MemoryConsolidator:
     """
     Handles memory consolidation during "sleep" phases.

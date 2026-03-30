@@ -17,9 +17,9 @@ import math
 from memory.episodic_memory import EpisodicBuffer, EpisodicEmbeddingLayer
 from memory.fading_memory import FadingMemorySystem
 from memory.heuristic_manager import HeuristicManager
-from memory.hopfield import SparceHopfieldNetwork, ModernContinuousHopfieldNetwork
+from memory.hopfield import SparseHopfieldNetwork, ModernContinuousHopfieldNetwork
 from memory.mem_handler import MemoryInterferenceHandler
-from memory.memory_consolidator import MemoryCosolidator
+from memory.memory_consolidator import MemoryConsolidator
 from memory.semantic_memory import SemanticMemoryLayer, TextPatternFinder
 from memory.snapshot_memory import SnapshotMemorySystem
 from memory.spatial_memory import SpatialMemoryModule
@@ -36,18 +36,20 @@ class Memory:
         self.ltm_capacity = ltm_capacity
         self.working_memory = []  # Short-term working memory as a list
         self.semantic_memory = {}  # Store generalized knowledge
-        self.ltm = ltm  # Long-term memory list
+        self.ltm = []  # Long-term memory list
         self.ltm_summary = {}  # Summary or knowledge graph of LTM
-        self.episodic_memory_path = 'C:/Users/jonny/Documents/PATH/ONI/ltm/episodes/'
-        self.semantic_memory_path = os.path.join('C:/Users/jonny/Documents/PATH/ONI/ltm_path/', 'semantic_memory.json')
-        self.ltm_summary_path = os.path.join('C:/Users/jonny/Documents/PATH/ONI/ltm_path/', "ltm_data.json")
+        _ltm_base = os.path.join(os.path.dirname(__file__), '..', '..', 'ltm')
+        self.episodic_memory_path = os.path.join(_ltm_base, 'episodes')
+        self.semantic_memory_path = os.path.join(_ltm_base, 'semantic_memory.json')
+        self.ltm_summary_path = os.path.join(_ltm_base, 'ltm_data.json')
         self.load_long_term_memory()
         self.episodic_embeddings = {}  # To store episodic embeddings
         self.semantic_embeddings = {}  # To store semantic embeddings
         self.episodic_layer = EpisodicEmbeddingLayer(input_dim=8192, output_dim=8192)
         self.semantic_layer = SemanticMemoryLayer(input_dim=8192, output_dim=8192)
-        self.episodic_layer.to(device)  # Adjust device as needed
-        self.semantic_layer.to(device)  # Adjust device as needed
+        _device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.episodic_layer.to(_device)
+        self.semantic_layer.to(_device)
         
         # New memory components
         self.episodic_buffer = EpisodicBuffer(hidden_dim=896, buffer_size=working_memory_capacity)
@@ -59,11 +61,11 @@ class Memory:
         self.is_sleeping = False
         self.last_sleep_time = time.time()
         self.sleep_interval = 3600  # Default: consolidate every hour
-        self.fading = FadingMemorySystem()
-        self.snapshot = SnapshotMemory()
+        self.fading = FadingMemorySystem(hidden_dim=896, decay_rate=0.05)
+        self.snapshot = SnapshotMemorySystem(hidden_dim=896)
     def cleanup(self):
         """Release any held resources."""
-        self.memory.data.zero_()
+        self.working_memory.clear()
         torch.cuda.empty_cache()
         
     def update_context(self, key: str, value: str):

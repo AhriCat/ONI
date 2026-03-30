@@ -1,3 +1,9 @@
+import math
+
+import torch
+import torch.nn as nn
+
+
 class FadingMemorySystem(nn.Module):
     def __init__(self, hidden_dim: int, decay_rate: float):
         super().__init__()

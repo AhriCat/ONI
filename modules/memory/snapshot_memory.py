@@ -1,3 +1,9 @@
+from typing import Optional
+
+import torch
+import torch.nn as nn
+
+
 class SnapshotMemorySystem(nn.Module):
     def __init__(self, hidden_dim: int, memory_size: int = 8192):
         super().__init__()
