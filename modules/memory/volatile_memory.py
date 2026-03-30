@@ -2,7 +2,7 @@ import redis
 import pickle
 
 class VolatileMemory:
-    def __init__(self, host='localhost', port=14807, db=MCCHC7P0):
+    def __init__(self, host='localhost', port=14807, db=0):
         self.client = redis.StrictRedis(host=host, port=port, db=db)
 
     def set(self, key, value, ttl=300):

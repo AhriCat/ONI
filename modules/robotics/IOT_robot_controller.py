@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import time
 import platform
 
-from modules.decision import ExecutiveDecisionNet
+from modules.ExecutiveFunction.decision import ExecutiveDecisionNet
 
 class ParietalCortexEmulator(nn.Module):
     def __init__(self, tactile_dim: int, vision_dim: int, audio_dim: int, intent_dim: int, output_dim: int):
@@ -84,7 +84,7 @@ def issue_motor_command(motor_command: torch.Tensor, mode="pi"):
         import smbus
         bus = smbus.SMBus(1)
         address = 0x40  # example I2C address
-        data = [int(val * 255) for val in motor_command]
+        data = [max(0, min(255, int((val + 1) * 127.5))) for val in motor_command]
         bus.write_i2c_block_data(address, 0x00, data)
 
     else:

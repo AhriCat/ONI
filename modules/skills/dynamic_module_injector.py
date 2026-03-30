@@ -1,12 +1,14 @@
+import io
+import inspect
+import os
+import struct
+from typing import Any, Dict, List, Tuple, Union
+
+import requests
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoConfig
 import huggingface_hub
-import inspect
-from typing import Dict, Any, List, Union, Tuple
-import os
-import requests
-import struct
 
 class DynamicModuleInjector(nn.Module):
     def __init__(self):

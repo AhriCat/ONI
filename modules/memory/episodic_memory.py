@@ -1,4 +1,8 @@
-from modules.attention.concept_similarity_attention import ConceptSimilarityMemoryAttention
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Optional
+from modules.attention.concept_similarity_memory_attention import ConceptSimilarityMemoryAttention
 
 class EpisodicEmbeddingLayer(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, compression_rate: float = 0.9):

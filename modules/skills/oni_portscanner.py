@@ -25,7 +25,7 @@ class PortScanner:
             thread.start()
 
 
-    def run():
+    def run(self):
         target = input("Enter the target IP address: ")
         start_port = int(input("Enter the starting port: "))
         end_port = int(input("Enter the ending port: "))
