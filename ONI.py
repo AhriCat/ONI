@@ -297,6 +297,7 @@ from modules.agents.micro_agent import MicroAgent
 from modules.planner.gru_planner import GRUPlanner
 from modules.memory.memory_ensemble import MemoryEnsemble
 from governor.firing_router import FiringRouter
+from governor.hyperconnection import HyperConnectionLayer
 
 try:
     from modules.attention.temporal_tri_attention import TemporalSparseTrifocusedAttention
@@ -494,6 +495,13 @@ class OniMicro(nn.Module):
             lm=self.nlp_module if hasattr(self.nlp_module, 'forward') else None,
         )
 
+        # HyperConnectionLayer — cross-module MHC residual hyperconnections
+        self.hyper_connections = HyperConnectionLayer(
+            module_names=["nlp", "vision", "audio"],
+            hidden_dim=hidden_dim,
+            num_heads=8,
+        )
+
     def add_tool(self, tool):
         self.toolregistry.register_tool(tool)
 
@@ -570,6 +578,28 @@ class OniMicro(nn.Module):
             audio_output, audio_energy = torch.zeros_like(x), 0.0  # Default if audio fails
 
         try:
+            # HyperConnection enrichment: each module attends to all others (MHC residual)
+            _h_nlp    = nlp_output.mean(1)    if nlp_output.dim()    == 3 else nlp_output
+            _h_vision = vision_output.mean(1) if vision_output.dim() == 3 else vision_output
+            _h_audio  = audio_output.mean(1)  if audio_output.dim()  == 3 else audio_output
+            _enriched = self.hyper_connections({
+                "nlp":    _h_nlp,
+                "vision": _h_vision,
+                "audio":  _h_audio,
+            })
+            # Unsqueeze back to seq dim if original was 3D
+            if nlp_output.dim() == 3:
+                nlp_output    = _enriched["nlp"].unsqueeze(1)
+                vision_output = _enriched["vision"].unsqueeze(1)
+                audio_output  = _enriched["audio"].unsqueeze(1)
+            else:
+                nlp_output    = _enriched["nlp"]
+                vision_output = _enriched["vision"]
+                audio_output  = _enriched["audio"]
+        except Exception as e:
+            print(f"Error in hyperconnection enrichment: {e}")
+
+        try:
             # Multi-modal attention
             attended_output = self.multi_modal_attention(nlp_output, vision_output, audio_output)
         except Exception as e:
@@ -598,6 +628,22 @@ class OniMicro(nn.Module):
         except Exception as e:
             print(f"Error in Meta-cognition module: {e}")
             meta_output, confidence, conflicts, meta_metadata = adjusted_output, 0.5, [], {}
+
+        try:
+            # Governor: stochastic firing router over the network state
+            # Uses meta_output as the routing signal; fires top-k paths
+            _gov_in = meta_output.mean(1) if meta_output.dim() == 3 else meta_output
+            _gov_out, _gate_weights, _fired = self.governor(
+                _gov_in, training=self.training
+            )
+            if meta_output.dim() == 3:
+                meta_output = _gov_out.unsqueeze(1)
+            else:
+                meta_output = _gov_out
+        except Exception as e:
+            print(f"Error in governor routing: {e}")
+            _gate_weights = None
+            _fired = []
 
         try:
             # Final output layer
@@ -1618,4 +1664,17 @@ class OniMicro(nn.Module):
             except Exception:
                 pass
         return outputs
-        return compressor
+
+    def observe_outcome(self, reward: float) -> None:
+        """
+        Push a scalar reward to the governor's Markov decision tree for live
+        policy adjusting.  Call this after evaluating the quality of the most
+        recent forward() or step() pass.
+
+        reward > 0 : successful outcome → biases future routing toward those paths
+        reward ≤ 0 : poor outcome       → biases future routing away from those paths
+        """
+        try:
+            self.governor.observe_outcome(reward)
+        except Exception as e:
+            print(f"Error in observe_outcome: {e}")
