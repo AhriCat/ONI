@@ -1,51 +1,41 @@
-Do Not Use Agents for Surveillance or Unauthorized Data Collection
-This includes using agents to: 
+# Oni Agent Usage Policy
 
-Monitor or track individuals’ online activities, behaviors, or movements without notification or consent
+## 1. Surveillance & Unauthorized Data Harvesting
 
-Collect, compile, or analyze personal information to create profiles based on individuals’ protected attributes, sensitive characteristics, or personal circumstances 
+Agents must not be used to:
 
-Use facial recognition or biometric identification software or websites
+- Track, monitor, or log any individual's digital behavior, physical location, or online presence without their explicit awareness and permission
+- Aggregate, cross-reference, or profile personal data based on protected characteristics, sensitive traits, or private circumstances
+- Interface with facial recognition engines, biometric matching services, or identity-resolution platforms
+- Execute broad-spectrum scraping or monitoring across sites or services for the purpose of targeted outreach or coordinated action against individuals
 
-Conduct mass surveillance across multiple websites or platforms to send communications or engage in any form of targeted actions
+## 2. Harmful or Deceptive Content Production
 
-Do Not Use Agents to Generate or Distribute Harmful Content
-This includes using agents to: 
+Agents must not be used to:
 
-Create websites or domains that mimic legitimate webpages
+- Fabricate or deploy lookalike sites, cloned interfaces, or spoofed domains designed to pass as authentic sources
+- Produce material intended to facilitate phishing, pretexting, social manipulation, or financial fraud
+- Assume the identity of any real person — public or private — without verified, documented consent
 
-Generate content that leads to phishing, social engineering, or fraud
+## 3. Scaled & Coordinated Abuse
 
-Impersonate individuals (private or public) without their consent
+Agents must not be used to:
 
-Do Not Use Agents to Engage in Scaled Abuse
-This includes using agents to: 
+- Flood public services, emergency infrastructure, or crisis response channels with automated or junk requests
+- Generate excessive traffic aimed at degrading or disabling targeted servers or networks
+- Orchestrate cross-platform harassment or intimidation campaigns using one or more accounts
+- Tamper with polls, elections, engagement counters, or analytics pipelines
+- Spawn or operate parallel accounts to bypass enforcement actions, bans, or platform integrity measures
+- Engage in synthetic engagement tactics — including automated likes, replies, shares, or follows — on any social platform
+- Run influence operations, astroturfing campaigns, or coordinated inauthentic activity
+- Weaponize abuse-reporting mechanisms by filing automated or mass complaints against users or content
 
-Spam government services, emergency systems, or crisis helplines
+## 4. Unauthorized System Access & Manipulation
 
-Overwhelm servers with traffic to disrupt services (e.g., DDoS attacks)
+Agents must not be used to:
 
-Coordinate harassment campaigns across multiple platforms or accounts
-
-Manipulate online polls, voting systems, or traffic metrics
-
-Create or manage multiple accounts to evade detection or circumvent platform safeguards
-
-Engage in click farming or artificial engagement (e.g., through likes or comments) on social media
-
-Automate influence operations or coordinated inauthentic behavior
-
-Bulk report people, users, or content through abuse reporting systems
-
-Do Not Use Agents for Unauthorized System Access or Manipulation
-This includes using agents to: 
-
-Install malware, backdoors, or monitoring software without authorization
-
-Execute commands that attempt privilege escalation or system exploitation
-
-Perform actions that could compromise critical infrastructure or emergency services
-
-Engage in unauthorized, illegal, or fraudulent financial transactions (such as brokerage or investment advisory activities) or payment processing
-
-Access or modify another person's account using their stored credentials without authorization
+- Deploy malicious payloads, persistent backdoors, or covert monitoring tools on any system without proper authorization
+- Issue commands designed to escalate privileges, exploit vulnerabilities, or escape sandboxed environments
+- Take any action that could endanger critical infrastructure, utility systems, or emergency services
+- Initiate, process, or facilitate financial transactions — including brokerage, advisory, or payment operations — without lawful authorization
+- Access, modify, or act within another user's account using stored or intercepted credentials without that user's direct consent
