@@ -1,0 +1,51 @@
+Do Not Use Agents for Surveillance or Unauthorized Data Collection
+This includes using agents to: 
+
+Monitor or track individuals’ online activities, behaviors, or movements without notification or consent
+
+Collect, compile, or analyze personal information to create profiles based on individuals’ protected attributes, sensitive characteristics, or personal circumstances 
+
+Use facial recognition or biometric identification software or websites
+
+Conduct mass surveillance across multiple websites or platforms to send communications or engage in any form of targeted actions
+
+Do Not Use Agents to Generate or Distribute Harmful Content
+This includes using agents to: 
+
+Create websites or domains that mimic legitimate webpages
+
+Generate content that leads to phishing, social engineering, or fraud
+
+Impersonate individuals (private or public) without their consent
+
+Do Not Use Agents to Engage in Scaled Abuse
+This includes using agents to: 
+
+Spam government services, emergency systems, or crisis helplines
+
+Overwhelm servers with traffic to disrupt services (e.g., DDoS attacks)
+
+Coordinate harassment campaigns across multiple platforms or accounts
+
+Manipulate online polls, voting systems, or traffic metrics
+
+Create or manage multiple accounts to evade detection or circumvent platform safeguards
+
+Engage in click farming or artificial engagement (e.g., through likes or comments) on social media
+
+Automate influence operations or coordinated inauthentic behavior
+
+Bulk report people, users, or content through abuse reporting systems
+
+Do Not Use Agents for Unauthorized System Access or Manipulation
+This includes using agents to: 
+
+Install malware, backdoors, or monitoring software without authorization
+
+Execute commands that attempt privilege escalation or system exploitation
+
+Perform actions that could compromise critical infrastructure or emergency services
+
+Engage in unauthorized, illegal, or fraudulent financial transactions (such as brokerage or investment advisory activities) or payment processing
+
+Access or modify another person's account using their stored credentials without authorization
