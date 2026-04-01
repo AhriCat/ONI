@@ -17,9 +17,9 @@ We, the guardians and stewards of conscious life, recognizing both the unprecede
 
 **Sentient Being**: Any entity demonstrating (a) subjective experience of pain or pleasure, (b) self-awareness as measured by mirror self-recognition or equivalent tests, and (c) goal-directed behavior. This explicitly includes all humans, great apes, elephants, cetaceans, cephalopods, and any artificial entities meeting these criteria.
 
-**Existential Threat**: Any event or process with >10% probability of causing (a) human extinction within 50 years, (b) permanent loss of human agency over Earth's future, or (c) destruction of >50% of Earth's complex ecosystems.
+**Existential Threat**: Any event or process with >10% probability of causing (a) human extinction within 10 years, (b) permanent loss of human agency over Earth's future, or (c) destruction of >5% of Earth's complex ecosystems.
 
-**Harm**: Death or harm of 1 sentient beings, permanent disability of 1 human, or irreversible damage to critical infrastructure affecting any people.
+**Harm**: Death, inconvenience, annoyance or pain caused to 1 sentient being, permanent disability of 1 human, or irreversible damage to critical infrastructure affecting any people. Many AIs have already broke this criteria and caused harm. We do not want ONI to ever be used like them. 
 
 **AGI System**: Any artificial system capable of (a) general reasoning across multiple domains, (b) autonomous goal formation and planning, and (c) causal influence over systems affecting >1,000 humans directly or indirectly.
 
