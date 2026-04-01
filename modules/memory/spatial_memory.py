@@ -1,4 +1,7 @@
-from typing import Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
+
+if TYPE_CHECKING:
+    from modules.memory.gaussian_splat_memory import GaussianSplatScene
 
 
 class SpatialMemoryModule:
@@ -16,6 +19,8 @@ class SpatialMemoryModule:
         self.current_position = (0, 0)  # Starting at origin
         self.memory = {}  # Dictionary to store room data indexed by position
         self.max_memory = max_memory
+        # Gaussian Splat scenes: room_key → GaussianSplatScene
+        self._splat_scenes: Dict[Tuple[int, int], "GaussianSplatScene"] = {}
 
     def get_current_room_key(self) -> Tuple[int, int]:
         """
@@ -69,3 +74,46 @@ class SpatialMemoryModule:
         """
         room_key = self.get_current_room_key()
         return self.memory.get(room_key, None)
+
+    # ── Gaussian Splat scene storage ─────────────────────────────────────────
+
+    def load_splat_scene(
+        self,
+        room_key: Tuple[int, int],
+        scene: "GaussianSplatScene",
+    ) -> None:
+        """
+        Store a GaussianSplatScene for the given room.
+
+        Mirrors the same LRU logic as load_room so splat scenes are evicted
+        together with their room data when memory is full.
+
+        Args:
+            room_key: (room_x, room_y) coordinate key
+            scene:    GaussianSplatScene to associate with this room
+        """
+        self._splat_scenes[room_key] = scene
+        if len(self._splat_scenes) > self.max_memory:
+            oldest = next(iter(self._splat_scenes))
+            del self._splat_scenes[oldest]
+
+    def get_splat_scene(
+        self,
+        room_key: Optional[Tuple[int, int]] = None,
+    ) -> Optional["GaussianSplatScene"]:
+        """
+        Retrieve the GaussianSplatScene for a room.
+
+        Args:
+            room_key: room coordinate; defaults to the current room if None
+
+        Returns:
+            GaussianSplatScene or None if not stored for that room
+        """
+        if room_key is None:
+            room_key = self.get_current_room_key()
+        return self._splat_scenes.get(room_key, None)
+
+    def get_current_splat_scene(self) -> Optional["GaussianSplatScene"]:
+        """Convenience wrapper: splat scene for the room ONI is currently in."""
+        return self.get_splat_scene(self.get_current_room_key())
