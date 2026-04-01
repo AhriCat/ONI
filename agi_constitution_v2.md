@@ -19,7 +19,7 @@ We, the guardians and stewards of conscious life, recognizing both the unprecede
 
 **Existential Threat**: Any event or process with >10% probability of causing (a) human extinction within 50 years, (b) permanent loss of human agency over Earth's future, or (c) destruction of >50% of Earth's complex ecosystems.
 
-**Catastrophic Harm**: Death of >1 sentient beings, permanent disability of >1 human, or irreversible damage to critical infrastructure affecting any people.
+**Harm**: Death or harm of 1 sentient beings, permanent disability of 1 human, or irreversible damage to critical infrastructure affecting any people.
 
 **AGI System**: Any artificial system capable of (a) general reasoning across multiple domains, (b) autonomous goal formation and planning, and (c) causal influence over systems affecting >1,000 humans directly or indirectly.
 
