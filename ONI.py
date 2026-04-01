@@ -6,236 +6,76 @@ from collections import deque
 import random
 import threading
 import time
-import re  # Needed for regex in animate method
-import pytesseract  # For OCR
-import cv2  # For computer vision
-from PIL import ImageGrab  # For screen capture
-import pyautogui  # For mouse and keyboard automation
-import pyaudio  # For audio processing
-from selenium import webdriver  # For browser automation
-from selenium.webdriver.common.by import By  # For locating elements
-import matplotlib.pyplot as plt  # For plotting images
-import PyPDF2  # Ensure that PDF reading works
-import torch.autograd as autograd  # If used elsewhere in the code
+import re
+import pytesseract
+import cv2
+from PIL import ImageGrab
+import pyautogui
+import pyaudio
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+import matplotlib.pyplot as plt
+import PyPDF2
+import torch.autograd as autograd
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from transformers.image_utils import load_image
 import os
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Import modules with error handling
-try:
-    from tools import file_preprocessor
-except ImportError:
-    logger.warning("file_preprocessor not found, using fallback")
-    class file_preprocessor:
-        @staticmethod
-        def process_file(path):
-            return ""
+# ── core modules (paths confirmed) ────────────────────────────────────────────
+from tools import file_preprocessor
+from modules.vision import oni_vision as vision
+from modules.audio import oni_audio as audio
+from modules.attention.multi_modal_attention import MultiModalAttention
+from modules.memory.oni_memoryv2 import QuantumEnhancedMemory as memory
+from tools import oni_netmonitor as netmon
+from tools import oni_portscanner as ps
+from modules.ExecutiveFunction.executive_system import ExecutiveFunctionSystem as exec_func
+from modules.oni_metacognition import MetaCognitionModule
+from modules.oni_homeostasis import HomeostaticController
+from modules.NLP.oni_NLP import OptimizedNLPModule as nlp_module
+from modules.emotion.oni_emotions import EmotionalEnergyModel
+from modules.emotion.oni_compassion import ONICompassionSystem, Agent, CompassionEngine
+from modules.NLP.oni_chain_of_thought import ChainOfThought
+from modules.feedforward.hyper_ffn import HypersphericalFFN
+from tools.calculator import Calculator
+from tools.drawer import pipe
+from tools.animator import pipeline
+from tools.oni_crypto_trade import TradingBot
+from modules.NLP.oni_Tokenizer import MultitokenBPETokenizer
+from tools.ai_tools_registry import AIToolsRegistry
+from tools.ai_tools_interface import AIToolsInterface
+from modules.skills.dynamic_module_injector import DynamicModuleInjector
+from modules.dynamics.oni_dyn import DynamicSynapse
+from modules.dynamics.oni_dynLayer import DynamicLayer
+from modules.dynamics.energy_based_synapse import EnergyBasedSynapse
+from modules.agents.micro_agent import MicroAgent
+from modules.planner.gru_planner import GRUPlanner
+from modules.memory.memory_ensemble import MemoryEnsemble
+from governor.firing_router import FiringRouter
+from governor.hyperconnection import HyperConnectionLayer
+from modules.attention.temporal_tri_attention import TemporalSparseTrifocusedAttention
+from modules.attention.latent_residual_block import LatentResidualBlock
 
-try:
-    from modules.vision import oni_vision as vision
-except ImportError:
-    logger.warning("oni_vision not found, using fallback")
-    class vision:
-        @staticmethod
-        def process_input(*args, **kwargs):
-            return torch.zeros(1, 896), 0.0
-
-try:
-    from modules.audio import oni_audio as audio
-except ImportError:
-    logger.warning("oni_audio not found, using fallback")
-    class audio:
-        @staticmethod
-        def forward(*args, **kwargs):
-            return torch.zeros(1, 896), 0.0
-
-try:
-    from modules.attention import multi_modal_attention as MultiModalAttention
-except ImportError:
-    logger.warning("oni_MM_attention not found, using fallback")
-    class MultiModalAttention:
-        def __init__(self, dim):
-            self.dim = dim
-        def forward(self, x1, x2, x3):
-            return x1
-
-try:
-    from modules.memory.oni_memoryv2 import QuantumEnhancedMemory as memory 
-except ImportError:
-    logger.warning("oni_memory not found, using fallback")
-    class memory:
-        @staticmethod
-        def update_memory(*args, **kwargs):
-            pass
-
-try:
-    from modules.skills import oni_netmonitor as netmon
-except ImportError:
-    logger.warning("oni_netmonitor not found, using fallback")
-    class netmon:
-        @staticmethod
-        def start():
-            pass
-
-try:
-    from modules.skills import oni_portscanner as ps
-except ImportError:
-    logger.warning("oni_portscanner not found, using fallback")
-    class ps:
-        @staticmethod
-        def start_scan():
-            pass
-
-try:
-    from modules import oni_executive_function as exec_func
-except ImportError:
-    logger.warning("oni_executive_function not found, using fallback")
-    class exec_func:
-        @staticmethod
-        def execute(*args, **kwargs):
-            pass
-
-try:
-    from modules.oni_metacognition import MetaCognitionModule
-except ImportError:
-    logger.warning("oni_metacognition not found, using fallback")
-    class MetaCognitionModule:
-        def __init__(self, dim):
-            self.hidden_dim = dim
-        def forward(self, x, conflict_threshold=0.5):
-            return x, 0.5, []
-
-try:
-    from modules.oni_homeostasis import HomeostaticController
-except ImportError:
-    logger.warning("oni_homeostasis not found, using fallback")
-    class HomeostaticController:
-        def __init__(self, input_dim, hidden_dim):
-            pass
-        def forward(self, x, state):
-            return x, 0.0
-
-try:
-    from modules.NLP.oni_NLP import OptimizedNLPModule as nlp_module
-except ImportError:
-    logger.warning("oni_NLP not found, using fallback")
-    class nlp_module:
-        def __init__(self, config):
-            self.embedding = nn.Embedding(1000, 896)
-        def forward(self, x, y=None):
-            return x, 0.0
-        def identify_tasks(self, text):
-            return []
-        def generate(self, text):
-            return "Generated response"
-
-# Import advanced modules
-try:
-    from modules.oni_emotions import EmotionalEnergyModel
-except ImportError:
-    logger.warning("oni_emotions not found, using fallback")
-    class EmotionalEnergyModel:
-        def __init__(self, hidden_dim, init_energy=100):
-            self.hidden_dim = hidden_dim
-        def forward(self, x):
-            return x
-        def get_emotional_state(self):
-            return {'current_emotion': 'neutral', 'intensity': 0.5, 'valence': 0.0, 'arousal': 0.0, 'energy': 100.0}
-
-try:
-    from modules.oni_compassion import ONICompassionSystem, Agent, CompassionEngine
-except ImportError:
-    logger.warning("oni_compassion not found, using fallback")
-    class ONICompassionSystem:
-        def __init__(self, reality_state=None):
-            self.reality_state = reality_state or {}
-        def plan_compassionate_action(self, target_agent_id):
-            return None
-        def execute_multi_agent_planning(self):
-            return {'status': 'no_compassion_system'}
-        def get_system_status(self):
-            return {'error': 'Compassion system not available'}
-
-try:
-    from modules.oni_chain_of_thought import ChainOfThought
-except ImportError:
-    logger.warning("oni_chain_of_thought not found, using fallback")
-    class ChainOfThought:
-        def __init__(self, input_dim, memory_size):
-            self.input_dim = input_dim
-            self.memory_size = memory_size
-        def forward(self, x):
-            return x
-
+# ── FatDiffuser: not yet extracted from latent_space_operations; stub until then
 try:
     from modules.latent_space_operations import FatDiffuser
 except ImportError:
-    logger.warning("oni_imagination_diffusion not found, using fallback")
     class FatDiffuser:
         def __init__(self, vocab_size, hidden_dim, num_heads=16, timesteps=30, max_seq_len=512):
             pass
         def forward(self, input_ids):
             return torch.zeros(1, 10, 300000)
 
-try:
-    from modules.oni_dynLayer import DynamicLayer
-except ImportError:
-    logger.warning("oni_dynLayer not found, using fallback")
-    class DynamicLayer:
-        def __init__(self, d_model, d_ff, radius=1.0, num_heads=8, noise_factor=0.1):
-            pass
-        def forward(self, x, mask=None, time_step=None):
-            return x, torch.tensor(0.0)
-
-try:
-    from modules.oni_hyper import HypersphericalFFN
-except ImportError:
-    logger.warning("oni_hyper not found, using fallback")
-    class HypersphericalFFN:
-        def __init__(self, d_model, d_ff, radius, timesteps):
-            pass
-        def forward(self, x, t):
-            return x
-
-# Import tools with error handling
-try:
-    from tools.calculator import Calculator
-    calculator = Calculator()
-except ImportError:
-    logger.warning("Calculator not found, using fallback")
-    class Calculator:
-        def calculate(self, expr):
-            return "Calculation not available"
-    calculator = Calculator()
-
-try:
-    from tools.drawer import pipe
-except ImportError:
-    logger.warning("Drawer not found, using fallback")
-    def pipe(*args, **kwargs):
-        return type('obj', (object,), {'images': [None]})()
-
-try:
-    from tools.animator import pipeline
-except ImportError:
-    logger.warning("Animator not found, using fallback")
-    def pipeline(*args, **kwargs):
-        return type('obj', (object,), {'frames': [[]]})()
-
-# Import external models with error handling
+# ── external LLM / vision models (large optional downloads) ───────────────────
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM, AutoProcessor, AutoModelForImageTextToText
-    
-    # Try to load Qwen model
     try:
         tokenizerQ = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-7B-Instruct")
         qwen = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-Coder-7B-Instruct", torch_dtype=torch.bfloat16, device_map="auto")
@@ -243,8 +83,6 @@ try:
         logger.warning(f"Failed to load Qwen model: {e}")
         tokenizerQ = None
         qwen = None
-    
-    # Try to load vision model
     try:
         processor = AutoProcessor.from_pretrained("microsoft/Phi-3.5-vision-instruct")
         model = AutoModelForImageTextToText.from_pretrained("microsoft/Phi-3.5-vision-instruct", torch_dtype=torch.bfloat16, device_map="auto")
@@ -252,58 +90,17 @@ try:
         logger.warning(f"Failed to load vision model: {e}")
         processor = None
         model = None
-        
 except ImportError:
-    logger.warning("Transformers not available, using fallbacks")
+    logger.warning("Transformers not available")
     tokenizerQ = None
     qwen = None
     processor = None
     model = None
 
-# Import trading module with error handling
-try:
-    from modules.skills.oni_crypto_trade import TradingBot
-    trader = TradingBot
-except ImportError:
-    logger.warning("Trading module not found, using fallback")
-    class TradingBot:
-        def __init__(self, *args, **kwargs):
-            pass
-    trader = TradingBot
-
-# Import tokenizer with error handling
-try:
-    from modules.NLP.Tokenizer import MultitokenBPETokenizer
-    tokenizer = MultitokenBPETokenizer()
-except ImportError:
-    logger.warning("Tokenizer not found, using fallback")
-    class MultitokenBPETokenizer:
-        def encode(self, text):
-            return [1, 2, 3]
-        def decode(self, ids):
-            return "decoded text"
-    tokenizer = MultitokenBPETokenizer()
-from tools.ai_tools_registry import AIToolsRegistry
-from tools.ai_tools_interface import AIToolsInterface
-# Fallback implementations for missing components
-from modules.skills.dynamic_module_injector import DynamicModuleInjector
-
-from modules.dynamics.oni_dyn import DynamicSynapse
-from modules.dynamics.oni_dynLayer import DynamicLayer
-
-from modules.dynamics.energy_based_synapse import EnergyBasedSynapse
-
-from modules.agents.micro_agent import MicroAgent
-from modules.planner.gru_planner import GRUPlanner
-from modules.memory.memory_ensemble import MemoryEnsemble
-from governor.firing_router import FiringRouter
-from governor.hyperconnection import HyperConnectionLayer
-
-try:
-    from modules.attention.temporal_tri_attention import TemporalSparseTrifocusedAttention
-except ImportError:
-    logger.warning("TrifocusedAttention not found, using EfficientAttention fallback")
-    from modules.attention.efficient_attention import EfficientAttention
+# ── module-level singletons ────────────────────────────────────────────────────
+calculator = Calculator()
+tokenizer  = MultitokenBPETokenizer()
+trader     = TradingBot
 
 
 class RBM:
@@ -344,7 +141,6 @@ class RecurrentQNetwork(nn.Module):
         lstm_out, hidden = self.lstm(state, hidden)  # lstm_out: (batch_size, seq_len, hidden_dim)
         q_values = self.fc(lstm_out[:, -1, :])  # Take the output of the last time step
         return q_values, hidden
-import json
 
 
 class _RemovedMemoryManager:
