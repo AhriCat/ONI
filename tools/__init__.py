@@ -33,6 +33,11 @@ from tools.musician import *
 from tools.RAG import *
 from tools.search import *
 
+# Skills promoted to tools
+from tools.oni_netmonitor import NetworkMonitor
+from tools.oni_portscanner import PortScanner
+from tools.oni_crypto_trade import TradingBot, TradingBotRNN
+
 __all__ = [
     'AIToolsRegistry',
     'ONICreativeAgent',
@@ -44,5 +49,9 @@ __all__ = [
     'AfterEffectsController',
     'PhotoshopController',
     'Calculator',
-    'FilePreprocessor'
+    'FilePreprocessor',
+    'NetworkMonitor',
+    'PortScanner',
+    'TradingBot',
+    'TradingBotRNN',
 ]
