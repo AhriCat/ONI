@@ -4,6 +4,7 @@ ONI is a **modular repository of neural network components** designed to support
 
 **Important:** ONI is an experimental research project. The modules vary in maturity—some are well-developed implementations, others are prototypes or conceptual sketches but they're being updated continuously. This could be a production-ready AGI system depending on how you configure and train it; it's basically just a toolkit of components that may be useful for building toward more capable AI architectures. Example of how this may be configured can be found in oniQuantum/, oniMini/ and ONI.py. Think legos or bionical or gundam or megazoid. They're made up of interconnected parts that you would consider building blocks. ONI is designed to have atomic modules that can be used in a wide variety of situations depending on how you configure them and their paths.  
 
+**note on requirements** The requirements of this repository change regularly. It is up to you to figure out if you need a library to do something. 
 ---
 
 ### ONI provides:
