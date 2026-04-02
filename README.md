@@ -61,7 +61,7 @@ Several attention variants for different use cases:
 | `efficient_attention.py` | Computational optimizations |
 | `concept_similarity_memory_attention.py` | Memory-augmented attention |
 | `reformer_attention.py` | LSH-based efficient attention |
-
+| `latentresidualblock.py` | LatentCompressed Attention and Residual attention with MHC implementation blk|
 ### Emotion & Values (`modules/emotion/`)
 
 Modules for modeling affective states and ethical reasoning:
