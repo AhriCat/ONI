@@ -9,7 +9,7 @@ Uses the real superintelligence_oven.bake() API:
 
 [EDITOR] The oven is mock-first: when superintelligence_oven is unavailable,
 a fallback SGD step keeps the evolution loop runnable for testing.
-When the oven IS available (pip install -e ../super_intelligence_oven), only
+When the oven IS available (pip install -e super_intelligence_oven), only
 the OVEN_AVAILABLE flag flips — no other code changes needed.
 
 Key design: ONI's metacognition replaces the oven's curriculum agent as the
