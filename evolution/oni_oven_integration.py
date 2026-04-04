@@ -22,7 +22,7 @@ import logging
 
 # Import the real oven API
 try:
-    from superintelligence_oven import (
+    from super_intelligence_oven.superintelligence_oven import (
         bake,
         OvenConfig,
         TeacherConfig,
