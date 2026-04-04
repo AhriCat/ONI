@@ -186,7 +186,7 @@ python -m trainingLoops.train_evolution \
     --verbose
 
 # Full evolution with real model and Oven
-pip install -e ../super_intelligence_oven
+pip install -e super_intelligence_oven
 python -m trainingLoops.train_evolution \
     --archive_dir ./oni_archive \
     --initial_variant ./ \
